@@ -1,0 +1,33 @@
+# poker-pi on the Raspberry Pi, published through its own Cloudflare Tunnel.
+# No ports are opened on the Pi; the tunnel only connects outwards.
+#
+# Setup (see docs/HOSTING.md for details):
+#   1. Cloudflare Zero Trust -> Networks -> Tunnels -> Create tunnel "poker-pi" (cloudflared)
+#      Public hostname: poker.example.com  ->  http://poker-server:8000
+#   2. echo "TUNNEL_TOKEN=<token>" > .env && chmod 600 .env
+#   3. echo "POKER_DATA_DIR=/srv/poker-pi" >> .env && mkdir -p /srv/poker-pi  (USB disk/SSD, not the SD card)
+#   4. docker compose -f docker-compose.pi.yml up -d --build
+services:
+  poker-server:
+    build: ..
+    image: poker-pi:latest
+    restart: unless-stopped
+    environment:
+      POKER_DB: /data/poker.db
+    volumes:
+      - ${POKER_DATA_DIR:?set POKER_DATA_DIR in .env}:/data
+    networks: [poker]
+    # optional: reachable from the local network for admin & debugging
+    # ports: ["8000:8000"]    # local network only (not forwarded by the router)
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env}
+    depends_on: [poker-server]
+    networks: [poker]
+
+networks:
+  poker: {}

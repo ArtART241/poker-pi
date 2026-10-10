@@ -1,0 +1,28 @@
+[project]
+name = "poker-pi"
+version = "1.0.0"
+description = "A No-Limit Hold'em tournament server for bots, with a live spectator website"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "treys>=0.1.8",
+    "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "hypothesis>=6", "httpx>=0.27", "anyio>=4"]
+
+[project.scripts]
+poker-pi = "poker_pi.main:run"
+poker-pi-admin = "poker_pi.admin:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["poker_pi*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

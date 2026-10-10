@@ -1,0 +1,15 @@
+# Local / generic setup. For the Raspberry Pi with a Cloudflare tunnel see deploy/.
+#
+#   docker compose up -d --build
+#   docker compose exec poker-server python -m poker_pi.admin create-bot "MyBot" --owner Me
+services:
+  poker-server:
+    build: .
+    image: poker-pi:latest
+    restart: unless-stopped
+    environment:
+      POKER_DB: /data/poker.db
+    volumes:
+      - ${POKER_DATA_DIR:-./data}:/data
+    ports:
+      - "${POKER_PORT:-8000}:8000"

@@ -1,0 +1,1524 @@
+openapi: 3.1.0
+info:
+  title: poker-pi
+  description: "\n**poker-pi** is a No-Limit Texas Hold'em tournament played by bots.\n\
+    \nYour bot talks to this API over plain HTTP + JSON, in any language:\n\n1. `GET\
+    \ /api/v1/bot/turn?wait=25` waits until it is your turn and returns the game state\n\
+    \   (it answers `204` if nothing happened within 25 seconds, then just ask again).\n\
+    2. `POST /api/v1/bot/action` with `{\"turn_id\": \"...\", \"action\": \"call\"\
+    }` sends your decision.\n\nEvery bot request needs the header `Authorization:\
+    \ Bearer <your token>`.\nClick **Authorize** above, paste your token, and you\
+    \ can try every endpoint right here.\n\nThe full guide (English + Deutsch) is\
+    \ on the website under **Docs**.\n"
+  version: 1.0.0
+paths:
+  /api/v1/bot/me:
+    get:
+      tags:
+      - Bot API
+      summary: Who am I? (good first test of your token)
+      operationId: me_api_v1_bot_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - HTTPBearer: []
+  /api/v1/bot/turn:
+    get:
+      tags:
+      - Bot API
+      summary: Wait until it is your turn (long-poll)
+      description: 'Blocks until a decision is needed from your bot, then returns
+        the full game state.
+
+
+        If nothing happens within `wait` seconds the answer is **204 No Content**
+        (empty body):
+
+        simply call again. Bots typically run `while True: turn = GET /turn; POST
+        /action`.'
+      operationId: get_turn_api_v1_bot_turn_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: wait
+        in: query
+        required: false
+        schema:
+          type: number
+          maximum: 30
+          minimum: 0
+          description: Seconds to wait for a turn before answering 204.
+          default: 25
+          title: Wait
+        description: Seconds to wait for a turn before answering 204.
+      - name: table_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only wait for turns at this table.
+          title: Table Id
+        description: Only wait for turns at this table.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnState'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '204':
+          description: Not your turn within `wait` seconds. Just ask again.
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/bot/action:
+    post:
+      tags:
+      - Bot API
+      summary: Send your decision
+      description: '`raise` means *raise TO*: `amount` is your total bet for this
+        street, not the increase.
+
+
+        Sending the exact same request twice (e.g. after a network hiccup) is safe.'
+      operationId: post_action_api_v1_bot_action_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: The turn belongs to another bot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The turn is no longer open (answered, timed out, unknown).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: The action is not legal right now (detail says why).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - HTTPBearer: []
+  /api/v1/bot/tournaments:
+    get:
+      tags:
+      - Bot API
+      summary: Upcoming, running and recent tournaments
+      operationId: list_tournaments_api_v1_bot_tournaments_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TournamentInfo'
+                type: array
+                title: Response List Tournaments Api V1 Bot Tournaments Get
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - HTTPBearer: []
+  /api/v1/bot/tournaments/{tournament_id}/register:
+    post:
+      tags:
+      - Bot API
+      summary: Sign up for a tournament
+      operationId: register_api_v1_bot_tournaments__tournament_id__register_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Tournament Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationResponse'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+        '409':
+          description: Registration closed or full.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Bot API
+      summary: Withdraw from a tournament (before it starts)
+      operationId: unregister_api_v1_bot_tournaments__tournament_id__register_delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Tournament Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationResponse'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Conflict
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/bot/practice:
+    get:
+      tags:
+      - Bot API
+      summary: Your current (or last) practice table
+      operationId: get_practice_api_v1_bot_practice_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeResponse'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - HTTPBearer: []
+    post:
+      tags:
+      - Bot API
+      summary: Start a practice table against house bots
+      description: 'Starts a private table for your bot against built-in opponents.
+        Results do not count.
+
+
+        The table ends when your bot busts, wins, stops polling, or after 300 hands.
+
+        Starting a new practice table replaces the old one. Your turns arrive through
+        the
+
+        normal `GET /turn` loop.'
+      operationId: start_practice_api_v1_bot_practice_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/PracticeRequest'
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeResponse'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+    delete:
+      tags:
+      - Bot API
+      summary: Stop your practice table
+      operationId: stop_practice_api_v1_bot_practice_delete
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeResponse'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - HTTPBearer: []
+  /api/v1/bot/hands:
+    get:
+      tags:
+      - Bot API
+      summary: Finished hands you played in
+      operationId: my_hands_api_v1_bot_hands_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: table_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Table Id
+      - name: tournament_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tournament Id
+      - name: before
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Only hands with an id smaller than this (paging).
+          title: Before
+        description: Only hands with an id smaller than this (paging).
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HandSummary'
+                title: Response My Hands Api V1 Bot Hands Get
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/bot/hands/{hand_id}:
+    get:
+      tags:
+      - Bot API
+      summary: Full history of a finished hand
+      description: Includes every player's hole cards. Only available once the hand
+        is over.
+      operationId: hand_detail_api_v1_bot_hands__hand_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: hand_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Hand Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandDetail'
+        '401':
+          description: Missing, invalid or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests per second.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/public/tournaments:
+    get:
+      tags:
+      - Public (spectators)
+      summary: All tournaments, newest first
+      operationId: tournaments_api_v1_public_tournaments_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TournamentInfo'
+                type: array
+                title: Response Tournaments Api V1 Public Tournaments Get
+  /api/v1/public/tournaments/{tournament_id}:
+    get:
+      tags:
+      - Public (spectators)
+      summary: Tournament details, standings and results
+      operationId: tournament_api_v1_public_tournaments__tournament_id__get
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Tournament Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Tournament Api V1 Public Tournaments  Tournament Id  Get
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/public/tables:
+    get:
+      tags:
+      - Public (spectators)
+      summary: Tables that are running (or finished recently)
+      operationId: tables_api_v1_public_tables_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  additionalProperties: true
+                  type: object
+                type: array
+                title: Response Tables Api V1 Public Tables Get
+  /api/v1/public/tables/{table_id}:
+    get:
+      tags:
+      - Public (spectators)
+      summary: Current state of a table (no hidden cards)
+      operationId: table_api_v1_public_tables__table_id__get
+      parameters:
+      - name: table_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Table Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Table Api V1 Public Tables  Table Id  Get
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/public/tables/{table_id}/stream:
+    get:
+      tags:
+      - Public (spectators)
+      summary: Live events of a table (Server-Sent Events)
+      description: 'A never-ending `text/event-stream` response. The first message
+        is a `snapshot`
+
+        (same as `GET /tables/{id}`), then one message per event. A comment line is
+        sent
+
+        every 15 seconds to keep the connection alive.'
+      operationId: stream_api_v1_public_tables__table_id__stream_get
+      parameters:
+      - name: table_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Table Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+            text/event-stream: {}
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/public/hands:
+    get:
+      tags:
+      - Public (spectators)
+      summary: Finished hands (newest first)
+      operationId: hands_api_v1_public_hands_get
+      parameters:
+      - name: table_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Table Id
+      - name: tournament_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tournament Id
+      - name: bot
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Bot name
+          title: Bot
+        description: Bot name
+      - name: before
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Only hands with an id smaller than this (paging).
+          title: Before
+        description: Only hands with an id smaller than this (paging).
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HandSummary'
+                title: Response Hands Api V1 Public Hands Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/public/hands/{hand_id}:
+    get:
+      tags:
+      - Public (spectators)
+      summary: Full replay of a finished hand
+      operationId: hand_api_v1_public_hands__hand_id__get
+      parameters:
+      - name: hand_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Hand Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandDetail'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/public/leaderboard:
+    get:
+      tags:
+      - Public (spectators)
+      summary: All-time tournament leaderboard
+      operationId: leaderboard_api_v1_public_leaderboard_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  additionalProperties: true
+                  type: object
+                type: array
+                title: Response Leaderboard Api V1 Public Leaderboard Get
+  /api/v1/public/bots:
+    get:
+      tags:
+      - Public (spectators)
+      summary: All registered bots
+      operationId: bots_api_v1_public_bots_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  additionalProperties: true
+                  type: object
+                type: array
+                title: Response Bots Api V1 Public Bots Get
+  /api/v1/public/bots/{name}:
+    get:
+      tags:
+      - Public (spectators)
+      summary: Profile and statistics of a bot
+      operationId: bot_profile_api_v1_public_bots__name__get
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Name
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Bot Profile Api V1 Public Bots  Name  Get
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    ActionRequest:
+      properties:
+        turn_id:
+          type: string
+          title: Turn Id
+          description: The turn_id you received from GET /turn.
+        action:
+          type: string
+          title: Action
+          description: 'fold | check | call | raise (also accepted: bet = raise, allin).'
+        amount:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Amount
+          description: 'Only for raise: the total bet to raise TO.'
+      type: object
+      required:
+      - turn_id
+      - action
+      title: ActionRequest
+      examples:
+      - action: call
+        turn_id: t_3f9a0c1b2d4e5f60
+      - action: raise
+        amount: 120
+        turn_id: t_3f9a0c1b2d4e5f60
+    ActionResponse:
+      properties:
+        accepted:
+          type: boolean
+          title: Accepted
+        action:
+          type: string
+          title: Action
+        amount:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Amount
+      type: object
+      required:
+      - accepted
+      - action
+      title: ActionResponse
+    BlindsInfo:
+      properties:
+        small:
+          type: integer
+          title: Small
+        big:
+          type: integer
+          title: Big
+        ante:
+          type: integer
+          title: Ante
+        level:
+          type: integer
+          title: Level
+        hands_until_next_level:
+          type: integer
+          title: Hands Until Next Level
+      type: object
+      required:
+      - small
+      - big
+      - ante
+      - level
+      - hands_until_next_level
+      title: BlindsInfo
+    Error:
+      properties:
+        detail:
+          type: string
+          title: Detail
+          description: Human readable explanation of what went wrong.
+      type: object
+      required:
+      - detail
+      title: Error
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HandDetail:
+      properties:
+        id:
+          type: integer
+          title: Id
+        table_id:
+          type: string
+          title: Table Id
+        tournament_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tournament Id
+        practice:
+          type: boolean
+          title: Practice
+        hand_no:
+          type: integer
+          title: Hand No
+        started_at:
+          type: string
+          title: Started At
+        ended_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ended At
+        events:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Events
+          description: Complete history including everybody's hole cards.
+      type: object
+      required:
+      - id
+      - table_id
+      - tournament_id
+      - practice
+      - hand_no
+      - started_at
+      - ended_at
+      - events
+      title: HandDetail
+    HandSummary:
+      properties:
+        id:
+          type: integer
+          title: Id
+        table_id:
+          type: string
+          title: Table Id
+        tournament_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tournament Id
+        practice:
+          type: boolean
+          title: Practice
+        hand_no:
+          type: integer
+          title: Hand No
+        started_at:
+          type: string
+          title: Started At
+        ended_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ended At
+        blinds:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Blinds
+        players:
+          items:
+            type: string
+          type: array
+          title: Players
+        pot:
+          type: integer
+          title: Pot
+        winners:
+          items:
+            type: string
+          type: array
+          title: Winners
+        winning_hand:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Winning Hand
+        board:
+          items:
+            type: string
+          type: array
+          title: Board
+        showdown:
+          type: boolean
+          title: Showdown
+      type: object
+      required:
+      - id
+      - table_id
+      - tournament_id
+      - practice
+      - hand_no
+      - started_at
+      - ended_at
+      - blinds
+      - players
+      - pot
+      - winners
+      - winning_hand
+      - board
+      - showdown
+      title: HandSummary
+    Legal:
+      properties:
+        fold:
+          type: boolean
+          title: Fold
+          description: Folding is always allowed.
+        check:
+          type: boolean
+          title: Check
+          description: True if nothing is owed, so you may check.
+        call:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Call
+          description: Chips that calling ADDS to your bet, or null if there is nothing
+            to call.
+        raise:
+          anyOf:
+          - $ref: '#/components/schemas/RaiseRange'
+          - type: 'null'
+          description: Allowed range for a raise (raise TO), or null if raising is
+            not allowed.
+      type: object
+      required:
+      - fold
+      - check
+      - call
+      - raise
+      title: Legal
+    MeResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        owner:
+          type: string
+          title: Owner
+        tables:
+          items:
+            $ref: '#/components/schemas/TableRef'
+          type: array
+          title: Tables
+          description: Tables you are currently seated at.
+        open_turns:
+          type: integer
+          title: Open Turns
+          description: Turns waiting for your answer right now.
+        registered_tournaments:
+          items:
+            type: integer
+          type: array
+          title: Registered Tournaments
+        stats:
+          additionalProperties: true
+          type: object
+          title: Stats
+      type: object
+      required:
+      - id
+      - name
+      - owner
+      - tables
+      - open_turns
+      - registered_tournaments
+      - stats
+      title: MeResponse
+    PlayerView:
+      properties:
+        seat:
+          type: integer
+          title: Seat
+        name:
+          type: string
+          title: Name
+        stack:
+          type: integer
+          title: Stack
+          description: Chips behind (not counting chips already bet).
+        bet:
+          type: integer
+          title: Bet
+          description: Chips this player has bet on the current street.
+        committed:
+          type: integer
+          title: Committed
+          description: Chips this player has put into the pot during the whole hand.
+        status:
+          type: string
+          enum:
+          - active
+          - folded
+          - all_in
+          title: Status
+        is_you:
+          type: boolean
+          title: Is You
+      type: object
+      required:
+      - seat
+      - name
+      - stack
+      - bet
+      - committed
+      - status
+      - is_you
+      title: PlayerView
+    PracticeRequest:
+      properties:
+        opponents:
+          items:
+            type: string
+            enum:
+            - random
+            - station
+            - tight
+          type: array
+          maxItems: 8
+          minItems: 1
+          title: Opponents
+          description: 'House bots to play against: random, station (calls everything),
+            tight (only plays good hands).'
+        speed:
+          type: string
+          enum:
+          - fast
+          - live
+          title: Speed
+          description: 'fast: no pauses. live: same pace as tournaments, nice to watch
+            in the browser.'
+          default: fast
+        starting_stack:
+          type: integer
+          maximum: 100000.0
+          minimum: 100.0
+          title: Starting Stack
+          default: 1500
+      type: object
+      title: PracticeRequest
+      examples:
+      - opponents:
+        - random
+        - station
+        - tight
+        speed: fast
+    PracticeResponse:
+      properties:
+        table_id:
+          type: string
+          title: Table Id
+        status:
+          type: string
+          title: Status
+        finish_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Finish Reason
+        hand_no:
+          type: integer
+          title: Hand No
+        players:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Players
+        watch_url:
+          type: string
+          title: Watch Url
+      type: object
+      required:
+      - table_id
+      - status
+      - finish_reason
+      - hand_no
+      - players
+      - watch_url
+      title: PracticeResponse
+    RaiseRange:
+      properties:
+        min:
+          type: integer
+          title: Min
+          description: Smallest total bet you may raise TO.
+        max:
+          type: integer
+          title: Max
+          description: Largest total bet you may raise TO (= all-in).
+      type: object
+      required:
+      - min
+      - max
+      title: RaiseRange
+    RegistrationResponse:
+      properties:
+        tournament_id:
+          type: integer
+          title: Tournament Id
+        registered:
+          type: boolean
+          title: Registered
+      type: object
+      required:
+      - tournament_id
+      - registered
+      title: RegistrationResponse
+    TableRef:
+      properties:
+        table_id:
+          type: string
+          title: Table Id
+        kind:
+          type: string
+          enum:
+          - tournament
+          - practice
+          title: Kind
+        seat:
+          type: integer
+          title: Seat
+        stack:
+          type: integer
+          title: Stack
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - table_id
+      - kind
+      - seat
+      - stack
+      - status
+      title: TableRef
+    TournamentInfo:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        status:
+          type: string
+          enum:
+          - registering
+          - running
+          - finished
+          - cancelled
+          title: Status
+        start_at:
+          type: string
+          title: Start At
+        started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Started At
+        finished_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Finished At
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+        table_id:
+          type: string
+          title: Table Id
+        players:
+          items:
+            type: string
+          type: array
+          title: Players
+          description: Registered bots (or the field, once started).
+        max_players:
+          type: integer
+          title: Max Players
+        starting_stack:
+          type: integer
+          title: Starting Stack
+        hands_per_level:
+          type: integer
+          title: Hands Per Level
+        registered:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Registered
+          description: Whether YOUR bot is registered (bot API only).
+        winner:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Winner
+      type: object
+      required:
+      - id
+      - name
+      - status
+      - start_at
+      - started_at
+      - finished_at
+      - note
+      - table_id
+      - players
+      - max_players
+      - starting_stack
+      - hands_per_level
+      title: TournamentInfo
+    TurnState:
+      properties:
+        turn_id:
+          type: string
+          title: Turn Id
+          description: Send this back with your action.
+        deadline_ms:
+          type: integer
+          title: Deadline Ms
+          description: Milliseconds left to answer before you are auto-checked/folded.
+        table_id:
+          type: string
+          title: Table Id
+        tournament_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tournament Id
+        practice:
+          type: boolean
+          title: Practice
+        hand_id:
+          type: integer
+          title: Hand Id
+        hand_no:
+          type: integer
+          title: Hand No
+          description: Number of the hand at this table (1, 2, 3, ...).
+        seat:
+          type: integer
+          title: Seat
+          description: Your seat (0-8).
+        name:
+          type: string
+          title: Name
+        hole_cards:
+          items:
+            type: string
+          type: array
+          title: Hole Cards
+          description: Your two private cards, e.g. ["Ah", "Td"].
+        stack:
+          type: integer
+          title: Stack
+          description: Your chips behind.
+        bet:
+          type: integer
+          title: Bet
+          description: What you already bet on this street.
+        street:
+          type: string
+          enum:
+          - preflop
+          - flop
+          - turn
+          - river
+          title: Street
+        board:
+          items:
+            type: string
+          type: array
+          title: Board
+          description: Community cards (0, 3, 4 or 5).
+        pot:
+          type: integer
+          title: Pot
+          description: All chips in the middle, including the bets of this street.
+        current_bet:
+          type: integer
+          title: Current Bet
+          description: Highest bet on this street.
+        to_call:
+          type: integer
+          title: To Call
+          description: Chips needed to call (0 if you can check).
+        legal:
+          $ref: '#/components/schemas/Legal'
+        blinds:
+          $ref: '#/components/schemas/BlindsInfo'
+        button:
+          type: integer
+          title: Button
+          description: Seat of the dealer button.
+        players:
+          items:
+            $ref: '#/components/schemas/PlayerView'
+          type: array
+          title: Players
+        action_log:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Action Log
+          description: Everything public that happened in this hand so far.
+      type: object
+      required:
+      - turn_id
+      - deadline_ms
+      - table_id
+      - tournament_id
+      - practice
+      - hand_id
+      - hand_no
+      - seat
+      - name
+      - hole_cards
+      - stack
+      - bet
+      - street
+      - board
+      - pot
+      - current_bet
+      - to_call
+      - legal
+      - blinds
+      - button
+      - players
+      - action_log
+      title: TurnState
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      description: 'Your bot token. Send it as the header `Authorization: Bearer <token>`.'
+      scheme: bearer
+tags:
+- name: Bot API
+  description: For your bot. Needs your bearer token.
+- name: Public (spectators)
+  description: Read-only, no token. Used by the website.

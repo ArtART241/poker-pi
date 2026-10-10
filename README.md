@@ -65,3 +65,7 @@ Or with Docker: `docker compose up -d --build`.
 | `bots/` | Simple Python test bots (used by the demo) |
 | `docs/` | Bot author guide (en/de), hosting guide, openapi.yaml |
 | `deploy/` | Compose file for the Pi with a Cloudflare Tunnel |
+
+## License
+
+MIT, see [LICENSE](LICENSE). The card artwork is public domain (see `web/public/cards/artwork/LICENSE.md`).

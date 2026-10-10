@@ -5,6 +5,8 @@
 
   // all markdown files from /docs/<lang>/NN-name.md, bundled at build time
   const files = import.meta.glob("../../../docs/*/*.md", { query: "?raw", import: "default", eager: true });
+  // The docs use this placeholder for the server address; it is replaced with the address the
+  // website is actually served from, so the real domain never has to appear in the repository.
   const PROD_URL = "https://poker.example.com";
 
   const pages = { en: [], de: [] };

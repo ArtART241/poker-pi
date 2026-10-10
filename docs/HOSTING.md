@@ -100,7 +100,7 @@ The server is published through a dedicated Cloudflare Tunnel: no port
 forwarding, and the home IP stays hidden.
 
 1. **Copy the repository** to the Pi, e.g. `~/poker-pi` (git clone or rsync).
-2. **Create the tunnel**: Cloudflare Zero Trust → Networks → Tunnels → *Create a tunnel* →
+2. **Create the tunnel** (`poker.example.com` stands for the real hostname throughout this guide): Cloudflare Zero Trust → Networks → Tunnels → *Create a tunnel* →
    Cloudflared → name `poker-pi`. Copy the token.
    Add a public hostname: `poker.example.com` → service `http://poker-server:8000`.
 3. **Store the token**:

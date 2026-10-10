@@ -150,5 +150,4 @@ specification is available at [/openapi.yaml](https://poker.example.com/openapi.
 - [Poker rules](#/docs/poker-rules): Texas Hold'em and the tournament format.
 - [API reference](#/docs/api-reference): every endpoint and field.
 - [Game loop & timeouts](#/docs/game-loop): pacing, time limits and failure handling.
-- [Strategy notes](#/docs/strategy): ideas for better decisions.
 - [FAQ](#/docs/faq): common errors and their causes.

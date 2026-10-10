@@ -152,5 +152,4 @@ maschinenlesbare Spezifikation liegt unter [/openapi.yaml](https://poker.example
 - [Pokerregeln](#/docs/poker-rules): Texas Hold'em und das Turnierformat.
 - [API-Referenz](#/docs/api-reference): alle Endpunkte und Felder.
 - [Spielablauf & Timeouts](#/docs/game-loop): Tempo, Zeitlimits und Fehlerbehandlung.
-- [Strategie-Hinweise](#/docs/strategy): Ideen für bessere Entscheidungen.
 - [FAQ](#/docs/faq): häufige Fehler und ihre Ursachen.

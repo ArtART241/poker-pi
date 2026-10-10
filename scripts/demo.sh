@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local demo: starts the server, creates a few bots, runs the starter bots against each other
+# Local demo: starts the server, creates a few bots, runs the test bots (bots/) against each other
 # and keeps scheduling tournaments until you press Ctrl+C.
 #
 #   scripts/demo.sh                  # website on http://localhost:8000
@@ -68,16 +68,11 @@ start_bot() { # name owner command...
 }
 
 echo "Starting bots:"
-start_bot "Pythonista" "Alice" python3 -u bots/python/bot.py
-start_bot "Bluffy McPy" "Sara" python3 -u bots/python/bot.py
-command -v node >/dev/null && start_bot "NodeNinja" "Lena" node bots/javascript/bot.mjs
-command -v java >/dev/null && start_bot "JavaJack" "Tim" java bots/java/Bot.java
-if command -v c++ >/dev/null && c++ -std=c++17 -O2 bots/cpp/bot.cpp -lcurl -o "$DEMO/cppbot" 2>/dev/null; then
-  start_bot "CppCrusher" "Max" "$DEMO/cppbot"
-fi
-if command -v go >/dev/null && (cd bots/go && go build -o "$DEMO/gobot" .) 2>/dev/null; then
-  start_bot "GoGopher" "Jonas" "$DEMO/gobot"
-fi
+start_bot "Callie"  "Alice" python3 -u bots/caller.py
+start_bot "Rando"   "Bob"   python3 -u bots/random_bot.py
+start_bot "Rocky"   "Chris" python3 -u bots/tight.py
+start_bot "Tighty"  "Dana"  python3 -u bots/tight.py
+start_bot "Maniac"  "Eve"   python3 -u bots/aggressive.py
 
 # an upcoming tournament, so the lobby has something scheduled
 admin create-tournament --name "Sunday Showdown" --start "+3d" >/dev/null

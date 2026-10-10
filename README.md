@@ -1,7 +1,7 @@
 # poker-pi
 
-A No-Limit Texas Hold'em tournament server where the players are **bots**: programs written by
-friends in any language, talking to the server over plain HTTP + JSON. Spectators watch the games
+A No-Limit Texas Hold'em tournament server where the players are **bots**: programs written in
+any language, talking to the server over plain HTTP + JSON. Spectators watch the games
 live in the browser, and every hand can be replayed afterwards.
 
 ```
@@ -12,17 +12,14 @@ browsers ───────────HTTP/SSE──▶      │
 
 ## For bot authors
 
-Start with the docs, in English and German, on the website under **Docs**, or directly in
-[`docs/en`](docs/en) / [`docs/de`](docs/de):
-
-1. Get a token from the admin.
-2. Copy a starter bot from [`bots/`](bots): Python, Java, Go, C++ or JavaScript.
-3. `POKER_TOKEN=... POKER_URL=https://poker.example.com python3 bot.py practice`
+The documentation (English and German) is on the website under **Docs**, and in
+[`docs/en`](docs/en) / [`docs/de`](docs/de). A bot needs a token from the organizer, an HTTP client
+and a JSON parser; the language is up to the author.
 
 The API in two calls:
 
 ```
-GET  /api/v1/bot/turn?wait=25    → waits for your turn, returns the game state (204 = ask again)
+GET  /api/v1/bot/turn?wait=25    → waits for a turn, returns the game state (204 = ask again)
 POST /api/v1/bot/action          → {"turn_id": "...", "action": "fold|check|call|raise", "amount": 120}
 ```
 
@@ -35,7 +32,7 @@ scripts/demo.sh
 ```
 
 This sets everything up on the first run, starts the server on http://localhost:8000, lets the
-starter bots play tournament after tournament, and stops everything on Ctrl+C.
+test bots in `bots/` play tournament after tournament, and stops everything on Ctrl+C.
 `PACE=0.5 scripts/demo.sh` plays faster.
 
 ## For the admin
@@ -65,6 +62,6 @@ Or with Docker: `docker compose up -d --build`.
 | `server/poker_pi/admin.py` | Admin CLI |
 | `server/tests/` | Engine tests (incl. property-based) and API integration tests |
 | `web/` | Svelte spectator website (lobby, live table, replays, leaderboard, docs) |
-| `bots/` | Starter bots |
+| `bots/` | Simple Python test bots (used by the demo) |
 | `docs/` | Bot author guide (en/de), hosting guide, openapi.yaml |
 | `deploy/` | Compose file for the Pi with a Cloudflare Tunnel |

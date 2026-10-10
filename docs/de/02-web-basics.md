@@ -1,33 +1,25 @@
-# HTTP & REST für Einsteiger
+# HTTP-Grundlagen
 
-Du kannst programmieren, hast aber noch nie etwas geschrieben, das mit einem Webserver redet? Diese
-Seite erklärt alles, was du für poker-pi brauchst, und nicht mehr. Lies sie einmal durch, dann ergibt
-der Rest der Doku Sinn.
+Diese Seite fasst die Web-Konzepte zusammen, die ein Bot benötigt: HTTP-Requests und -Responses,
+JSON, Statuscodes, Bearer-Tokens und Long-Polling. Wer REST-APIs kennt, kann sie überspringen.
 
-## HTTP in 60 Sekunden
+## Requests und Responses
 
-HTTP ist ein **Request/Response**-Protokoll. Dein Programm (der *Client*) schickt einen **Request**
-an einen *Server*, und der Server schickt genau eine **Response** zurück. Das war's. Es gibt keine
-dauerhafte Verbindung, um die du dich kümmern musst.
+HTTP ist ein Request/Response-Protokoll. Ein Client sendet einen **Request** an einen Server und
+erhält genau eine **Response**. Eine dauerhafte Verbindung muss nicht verwaltet werden.
 
 Ein Request besteht aus:
 
 | Teil | Beispiel | Bedeutung |
 |---|---|---|
-| **Methode** | `GET`, `POST`, `DELETE` | Was du tun willst. `GET` = etwas lesen, `POST` = etwas schicken / etwas auslösen, `DELETE` = etwas entfernen. |
-| **URL** | `https://poker.example.com/api/v1/bot/turn?wait=25` | Wohin. Der Teil nach `?` ist der *Query-String*: zusätzliche Parameter als `key=value&key2=value2`. |
-| **Header** | `Authorization: Bearer pk_...` | Metadaten als `Name: Wert`-Zeilen, z. B. wer du bist oder welches Format der Body hat. |
-| **Body** | `{"turn_id": "t_1", "action": "call"}` | Optionale Daten, meist nur bei `POST`. Hier immer JSON. |
+| **Methode** | `GET`, `POST`, `DELETE` | Art der Operation: `GET` liest, `POST` sendet Daten oder löst etwas aus, `DELETE` entfernt. |
+| **URL** | `https://poker.example.com/api/v1/bot/turn?wait=25` | Das Ziel. Der Teil nach `?` ist der *Query-String* mit Parametern als `key=value&key2=value2`. |
+| **Header** | `Authorization: Bearer pk_...` | Metadaten als `Name: Wert`-Zeilen, z. B. Zugangsdaten oder das Body-Format. |
+| **Body** | `{"turn_id": "t_1", "action": "call"}` | Optionale Nutzdaten, meist nur bei `POST`. Bei poker-pi immer JSON. |
 
-Eine Response besteht aus:
+Eine Response besteht aus einem **Statuscode** (z. B. `200`), **Headern** und einem optionalen **Body**.
 
-| Teil | Beispiel | Bedeutung |
-|---|---|---|
-| **Statuscode** | `200`, `204`, `401`, `422` | Eine Zahl, die sagt, wie es gelaufen ist (Tabelle unten). |
-| **Header** | `Content-Type: application/json` | Metadaten. |
-| **Body** | `{"name": "MeinBot", ...}` | Die eigentliche Antwort, hier immer JSON (oder leer). |
-
-So sieht ein echter Request auf der Leitung aus. Es ist einfach Text:
+Auf der Leitung ist beides reiner Text:
 
 ```http
 POST /api/v1/bot/action HTTP/1.1
@@ -39,8 +31,6 @@ Content-Length: 46
 {"turn_id": "t_3f9a0c1b", "action": "call"}
 ```
 
-Und die Antwort:
-
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -48,40 +38,38 @@ Content-Type: application/json
 {"accepted": true, "action": "call", "amount": null}
 ```
 
-Das schreibst du nie von Hand. Die HTTP-Bibliothek deiner Sprache baut es für dich. Aber es hilft zu
-wissen, dass keine Magie dahintersteckt.
+HTTP-Bibliotheken erzeugen und lesen diese Nachrichten; von Hand geschrieben werden sie nie.
 
 <details>
-<summary>Und HTTPS?</summary>
+<summary>HTTPS</summary>
 
-HTTPS ist HTTP in einer verschlüsselten Verbindung (TLS). Deine HTTP-Bibliothek erledigt das
-automatisch, wenn die URL mit `https://` beginnt. Du musst nichts tun, außer dass dein System aktuelle
-Root-Zertifikate haben sollte. Bei Zertifikatsfehlern schau in die [FAQ](#/docs/faq).
+HTTPS ist HTTP innerhalb einer verschlüsselten TLS-Verbindung. HTTP-Bibliotheken erledigen das für
+`https://`-URLs automatisch, sofern das System aktuelle Root-Zertifikate hat. Zertifikatsfehler
+behandelt die [FAQ](#/docs/faq).
 </details>
 
-## Statuscodes, die dir begegnen
+## Statuscodes
 
-| Code | Name | Was er für deinen Bot bedeutet |
+| Code | Name | Bedeutung bei poker-pi |
 |---|---|---|
-| `200` | OK | Alles hat geklappt. Der Body enthält die Antwort. |
-| `204` | No Content | Hat geklappt, aber es gibt nichts zu berichten. Bei `GET /turn` heißt das *"du bist noch nicht dran, frag nochmal"*. Der Body ist **leer**, also nicht als JSON parsen! |
-| `401` | Unauthorized | Token fehlt oder ist falsch. |
-| `403` | Forbidden | Du wolltest den Zug eines anderen Bots beantworten. |
-| `404` | Not Found | Falsche URL oder unbekannte ID. |
-| `409` | Conflict | Der Zug ist vorbei (du warst zu langsam oder hast schon geantwortet). |
-| `422` | Unprocessable Entity | Dein Request wurde verstanden, ist aber nicht erlaubt, z. B. ein zu kleiner Raise. Der Body sagt, warum. |
-| `429` | Too Many Requests | Du schickst zu viele Requests. Mach langsamer. |
-| `5xx` | Server Error | Nicht deine Schuld. Kurz warten und nochmal versuchen. |
+| `200` | OK | Erfolg; der Body enthält das Ergebnis. |
+| `204` | No Content | Erfolg ohne Inhalt. Bei `GET /turn`: noch keine Entscheidung fällig, erneut fragen. Der Body ist **leer** und darf nicht als JSON geparst werden. |
+| `401` | Unauthorized | Token fehlt oder ist ungültig. |
+| `403` | Forbidden | Versuch, den Zug eines anderen Bots zu beantworten. |
+| `404` | Not Found | Unbekannte URL oder ID. |
+| `409` | Conflict | Der Zug ist vorbei (schon beantwortet oder abgelaufen). |
+| `422` | Unprocessable Entity | Der Request ist verständlich, aber nicht erlaubt, z. B. ein Raise unter dem Minimum. Der Body nennt den Grund. |
+| `429` | Too Many Requests | Zu viele Requests ohne Wirkung; der Client sollte langsamer werden. |
+| `5xx` | Server Error | Ein Problem auf dem Server; ein erneuter Versuch nach kurzer Pause ist sinnvoll. |
 
-Die Faustregel: **2xx = gut, 4xx = dein Request hat ein Problem, 5xx = der Server hat ein Problem.**
+Faustregel: **2xx** Erfolg, **4xx** ein Problem mit dem Request, **5xx** ein Problem auf dem Server.
 
-> Jede Fehlerantwort von poker-pi hat einen JSON-Body wie `{"detail": "Erklärung"}`.
-> **Gib `detail` immer aus, wenn etwas schiefgeht.** Da steht genau drin, was du ändern musst.
+Jede Fehlerantwort von poker-pi hat einen JSON-Body der Form `{"detail": "Erklärung"}`. `detail`
+zu protokollieren ist der schnellste Weg zur Ursache eines Problems.
 
 ## JSON
 
-JSON ist das Textformat für Daten im Web. Wenn du Python-Dicts oder JavaScript-Objekte kennst, kennst
-du es schon:
+JSON ist das Datenformat aller Bodies:
 
 ```json
 {
@@ -92,33 +80,25 @@ du es schon:
 }
 ```
 
-- `{ }` ist ein *Objekt* (Map/Dictionary: String-Schlüssel → Werte)
-- `[ ]` ist ein *Array* (eine Liste)
-- Werte: Strings in `"doppelten Anführungszeichen"`, Zahlen, `true`/`false`, `null`
+- `{ }` ist ein Objekt (String-Schlüssel mit Werten), `[ ]` ein Array.
+- Werte sind Strings in doppelten Anführungszeichen, Zahlen, `true` / `false` oder `null`.
 
-Jede Sprache kann JSON-Text in native Datenstrukturen umwandeln und zurück:
-
-| Sprache | JSON lesen | JSON schreiben |
-|---|---|---|
-| Python | `json.loads(text)` → dict | `json.dumps(obj)` |
-| JavaScript | `JSON.parse(text)` | `JSON.stringify(obj)` |
-| Go | `json.Unmarshal(bytes, &structVar)` | `json.Marshal(v)` |
-| Java | kein eingebauter Parser; der Starter-Bot hat einen kleinen dabei, oder Gson/Jackson | |
-| C++ | kein eingebauter Parser; der Starter-Bot hat einen kleinen dabei, oder nlohmann/json | |
+Nahezu jede Sprache bietet einen JSON-Parser, eingebaut oder als Standardpaket, der diesen Text in
+native Maps/Listen oder typisierte Strukturen umwandelt und zurück.
 
 <details>
-<summary>Tipp: null vs. fehlend vs. 0</summary>
+<summary>null hat eine Bedeutung</summary>
 
-Bei poker-pi hat `null` eine Bedeutung. `"call": null` heißt *"es gibt nichts zu callen"* und
-`"raise": null` heißt *"du darfst nicht raisen"*. In typisierten Sprachen bildest du das auf
-`Optional`, Pointer (`*int` in Go) oder einen Nullable-Typ ab, nicht auf `0`. Sonst wird aus "kann nicht
-raisen" ein "raise auf 0", und der Server lehnt das ab.
+Bei poker-pi trägt `null` Information: `"call": null` heißt, es gibt nichts zu callen, und
+`"raise": null` heißt, Raisen ist nicht erlaubt. In statisch typisierten Sprachen entsprechen diese
+Felder einem Optional- oder Nullable-Typ. Eine Abbildung auf `0` würde aus "kann nicht raisen"
+ein "raise auf 0" machen, was der Server ablehnt.
 </details>
 
 ## REST
 
-"REST" ist nur ein Stil, HTTP-APIs zu entwerfen. **Dinge** haben URLs (`/tournaments/3`), und die
-HTTP-Methode sagt, was du mit ihnen machst:
+REST bezeichnet einen Stil von HTTP-APIs, bei dem Ressourcen URLs haben und die Methode die
+Operation ausdrückt:
 
 ```
 GET    /api/v1/bot/tournaments                 → Turniere auflisten
@@ -126,95 +106,40 @@ POST   /api/v1/bot/tournaments/3/register      → für Turnier 3 anmelden
 DELETE /api/v1/bot/tournaments/3/register      → von Turnier 3 abmelden
 ```
 
-Mehr steckt nicht dahinter. Mehr über REST musst du nicht wissen.
-
 ## Bearer-Tokens
 
-Der Server muss wissen, **welcher Bot** einen Request schickt. Deshalb trägt jeder Request an
-`/api/v1/bot/...` deinen Token in einem Header:
+Jeder Request an `/api/v1/bot/...` identifiziert den Bot über einen Header:
 
 ```
 Authorization: Bearer pk_3Jk9xQ7mR2...
 ```
 
-- `Authorization` ist der Header-Name (ein Standard-HTTP-Header).
-- `Bearer` heißt *"wer diesen Token trägt (besitzt), darf rein"*. Das ist der Token-Typ.
-- Dann genau ein Leerzeichen, dann dein Token.
-
-Das ist der ganze Mechanismus. Kein Login, keine Session, keine Cookies. Jeder Request wird für sich geprüft.
+`Authorization` ist ein Standard-HTTP-Header; `Bearer` ist der Token-Typ ("wer diesen Token trägt,
+ist berechtigt"), gefolgt von genau einem Leerzeichen und dem Token. Es gibt weder Login noch
+Session: Jeder Request wird für sich geprüft.
 
 <details>
-<summary>Typische Fehler mit dem Token</summary>
+<summary>Häufige Fehler</summary>
 
-- Das Wort `Bearer` (und das Leerzeichen danach) vergessen.
-- `Authorisation` geschrieben (britisch). Der Header heißt `Authorization` mit z.
-- Token mit Zeilenumbruch oder Leerzeichen am Ende kopiert.
-- Token in die URL gepackt (`?token=...`). Das funktioniert nicht, und URLs landen in Logs.
-- Token auf GitHub committet. Nimm stattdessen eine Umgebungsvariable.
-
-Wenn du glaubst, dein Token ist rausgekommen, kann der Organisator einen neuen ausstellen (`rotate-token`), und
-der alte funktioniert sofort nicht mehr.
+- Das Wort `Bearer` oder das Leerzeichen danach fehlt.
+- Der Header ist `Authorisation` statt `Authorization` geschrieben.
+- Der kopierte Token enthält ein Leerzeichen oder einen Zeilenumbruch am Ende.
+- Der Token wird in der URL übergeben (`?token=...`); das wird nicht unterstützt, und URLs landen
+  häufig in Logs.
 </details>
 
-## Long-Polling: warum `GET /turn` "hängt"
+## Long-Polling
 
-Dein Bot muss herausfinden, wann er dran ist. Dafür gibt es drei Wege:
+Ein Bot muss erfahren, wann er an der Reihe ist. Drei Ansätze sind verbreitet:
 
-1. **Polling**: alle 100 ms "bin ich dran?" fragen. Einfach, verschwendet aber die Ressourcen des
-   Servers, und der Server ist ein Raspberry Pi. Bitte nicht.
-2. **Push**: der Server ruft *dein* Programm auf. Dann müsste dein Laptop aus dem Internet erreichbar
-   sein, und das ist umständlich.
-3. **Long-Polling**: du fragst "bin ich dran?", und der Server **antwortet erst, wenn du es bist**
-   (oder nach 25 Sekunden). Sobald du dran bist, bekommst du die Antwort sofort.
+1. **Polling**: wiederholtes Fragen, z. B. alle 100 ms. Einfach, aber belastend für den Server.
+2. **Push**: Der Server ruft den Bot auf. Dazu müsste der Bot aus dem Internet erreichbar sein.
+3. **Long-Polling**: Der Bot fragt, und der Server hält die Anfrage offen, bis es etwas zu melden
+   gibt oder ein Timeout erreicht ist. Die Antwort kommt, sobald der Zug geöffnet wird.
 
-poker-pi nutzt **Long-Polling**. Für dich heißt das:
+poker-pi verwendet Long-Polling. `GET /api/v1/bot/turn?wait=25` kann bis zu 25 Sekunden dauern;
+das ist das erwartete Verhalten. Daraus folgt:
 
-```
-Endlosschleife:
-    response = GET /api/v1/bot/turn?wait=25      # kann bis zu 25 Sekunden dauern, das ist normal!
-    if response.status == 204: continue          # nichts passiert, nochmal fragen
-    state = JSON aus response parsen
-    action = decide(state)
-    POST /api/v1/bot/action  {turn_id, action}
-```
-
-> **Wichtig:** Stell den **Timeout deines HTTP-Clients höher als 25 Sekunden**, z. B. 40 s. Manche
-> Bibliotheken haben standardmäßig 10 oder 30 Sekunden und würden den Request abbrechen, bevor der
-> Server antwortet.
-
-<details>
-<summary>Blockiert ein hängender Request nicht mein Programm?</summary>
-
-Ja, der Thread, der den Request schickt, wartet. Genau das willst du: Dein Bot hat nichts anderes zu
-tun, solange er nicht dran ist. Du brauchst keine Threads, kein async/await und keine Callbacks. Eine
-ganz normale blockierende `while`-Schleife ist perfekt.
-
-Wenn du nebenbei etwas berechnen *willst* (z. B. Tabellen vorberechnen), nimm einen eigenen Thread.
-Das ist optional.
-</details>
-
-## Im Browser ausprobieren: Swagger UI
-
-Der Server dokumentiert sich selbst. Öffne **[/docs](https://poker.example.com/docs)**:
-
-1. Oben rechts auf **Authorize** klicken, Token einfügen (ohne `Bearer `), bestätigen.
-2. Einen Endpunkt aufklappen, z. B. `GET /api/v1/bot/me`, auf **Try it out** und dann **Execute** klicken.
-3. Du siehst den genauen Request (als curl-Befehl), den Statuscode und die Antwort.
-
-So verstehst du am schnellsten, was jeder Endpunkt zurückgibt. Die maschinenlesbare Spezifikation
-liegt unter [/openapi.yaml](https://poker.example.com/openapi.yaml). Manche Tools erzeugen daraus
-Client-Code, für diese API ist das aber übertrieben.
-
-## Nimm die Standardbibliothek
-
-Du brauchst keine Frameworks. Jeder Starter-Bot nutzt nur, was die Sprache mitbringt:
-
-| Sprache | HTTP | JSON |
-|---|---|---|
-| Python | `urllib.request` (oder `requests`, wenn du magst: `pip install requests`) | `json` |
-| Java 11+ | `java.net.http.HttpClient` | nicht eingebaut (im Starter enthalten) |
-| Go | `net/http` | `encoding/json` |
-| C++ | nicht eingebaut, nimm **libcurl** | nicht eingebaut (im Starter enthalten) |
-| JavaScript (Node 18+) | eingebautes `fetch` | eingebautes `JSON` |
-| C# | `System.Net.Http.HttpClient` | `System.Text.Json` |
-| Rust | Crates `ureq` oder `reqwest` | Crate `serde_json` |
+- Der **Timeout des HTTP-Clients muss länger als die Wartezeit sein**, zum Beispiel 40 Sekunden.
+  Manche Bibliotheken verwenden standardmäßig 10 oder 30 Sekunden.
+- Eine einfache blockierende Schleife genügt. Threads, async-Code oder Callbacks sind nicht nötig.

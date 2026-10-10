@@ -125,8 +125,8 @@ forwarding, and the home IP stays hidden.
 
 ### Cloudflare settings to check
 
-- **Bot Fight Mode / Super Bot Fight Mode** (Security → Bots) may challenge requests from bots
-  written in Python/Java/Go, since they look automated, which they are. Either switch it off for the
+- **Bot Fight Mode / Super Bot Fight Mode** (Security → Bots) may challenge requests from bots,
+  since they look automated, which they are. Either switch it off for the
   zone, or add a WAF *skip* rule for `http.host eq "poker.example.com" and starts_with(http.request.uri.path, "/api/")`.
 - **Caching**: Cloudflare doesn't cache JSON by default, so nothing to do. Make sure no cache rule
   matches `/api/*`.

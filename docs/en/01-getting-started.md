@@ -1,179 +1,154 @@
 # Getting started
 
-Welcome to **poker-pi**! The players here aren't people. They're **programs**, and you write one of them.
-Your bot connects to the poker server over the internet, gets told when it's its turn, and answers with
-a move: fold, check, call or raise. Everyone else can watch the games live in the browser.
+poker-pi runs No-Limit Texas Hold'em tournaments in which every player is a program. Each
+participant writes a bot that connects to the server over HTTP, receives the game state whenever
+a decision is due, and answers with an action: fold, check, call or raise. Spectators follow the
+games live in the browser.
 
-You can use **any programming language** that can send HTTP requests: Python, Java, Go, C++,
-JavaScript, Rust, C#, Kotlin, and so on. If your language can talk to a website, it can play poker here.
+Any programming language works, as long as it can send HTTP requests and read and write JSON.
+The server makes no assumptions about how a bot is implemented.
 
-> **Never done web programming?** No problem. The docs assume you know how to program but not how
-> the web works. The page [HTTP & REST for beginners](#/docs/web-basics) explains everything you need.
-> It's less than you think.
+> The documentation assumes general programming experience but no background in web development.
+> [HTTP basics](#/docs/web-basics) covers the few web concepts that are needed.
 
-## What you need
+## Requirements
 
-1. **A bot token** from the organizer. It's a long secret string like `pk_3Jk9...`. It identifies your bot,
-   like a password. Keep it secret.
-2. **A programming language** of your choice, installed on your computer.
-3. **A computer that stays online** while a tournament is running. Your laptop is fine, and so is
-   a Raspberry Pi or a small server.
+1. **A bot token.** The organizer issues one per bot. It is a long secret string such as
+   `pk_3Jk9...` that identifies the bot, and should be treated like a password.
+2. **An HTTP client and a JSON library** in the language of choice. Most languages include both
+   in their standard library or in a widely used package.
+3. **A machine that stays online** for the duration of a tournament. A laptop, a Raspberry Pi
+   or a small server are all suitable.
 
-The server address is:
+Server address:
 
 ```
 https://poker.example.com
 ```
 
-## The idea in one picture
+## How a bot works
 
-Your bot does only two things, over and over:
+A bot repeats two requests for as long as it runs:
 
 ```
-   your bot                                      poker server
-      |                                               |
-      |  GET /api/v1/bot/turn?wait=25  -------------> |   "Is it my turn?"
-      |                                               |   (the server keeps the request open
-      |                                               |    until it IS your turn, max 25 s)
-      | <-------------  200 OK + game state (JSON)    |   "Yes! You have Ah Kd, pot is 60..."
-      |                                               |
-      |  POST /api/v1/bot/action  -------------------> |   {"turn_id": "...", "action": "call"}
-      | <-------------  200 OK                        |   "Got it."
-      |                                               |
-      |  GET /api/v1/bot/turn?wait=25  -------------> |   ...and again
+   bot                                           poker server
+    |                                                 |
+    |  GET /api/v1/bot/turn?wait=25  ---------------> |   is a decision due?
+    |                                                 |   (the request is held open until
+    |                                                 |    it is the bot's turn, max. 25 s)
+    | <---------------  200 OK + game state (JSON)    |
+    |                                                 |
+    |  POST /api/v1/bot/action  ---------------------> |   {"turn_id": "...", "action": "call"}
+    | <---------------  200 OK                        |
+    |                                                 |
+    |  GET /api/v1/bot/turn?wait=25  ---------------> |   ...and so on
 ```
 
-If it's not your turn within 25 seconds, the server answers **204 No Content** (an empty answer).
-Then you simply ask again. That's the whole protocol.
+If no decision is due within 25 seconds, the server answers with **204 No Content** (an empty
+response), and the bot asks again. This is the entire protocol; everything else is optional.
 
-## Quickstart (10 minutes)
+In pseudocode:
 
-### Step 1: Test your token
+```
+loop forever:
+    response = GET /api/v1/bot/turn?wait=25           (client timeout: 40 s)
+    if response.status == 204: continue
+    state  = parse JSON
+    action = decide(state)                             (the bot's own logic)
+    POST /api/v1/bot/action  { "turn_id": state.turn_id, ...action }
+```
 
-Open a terminal and run this (replace the token with yours):
+Every request carries the token in the header `Authorization: Bearer <token>`.
+
+## Trying the API by hand
+
+The steps below use `curl`, a command-line HTTP client that ships with macOS, Linux and
+Windows 10/11 (in PowerShell it is called as `curl.exe`). They show exactly what a bot
+exchanges with the server.
+
+**1. Check the token.**
 
 ```bash
-curl -H "Authorization: Bearer pk_YOUR_TOKEN" https://poker.example.com/api/v1/bot/me
+curl -H "Authorization: Bearer pk_TOKEN" https://poker.example.com/api/v1/bot/me
 ```
 
-You should see something like `{"id":"b_...","name":"YourBot",...}`. If you get
-`{"detail":"Invalid or revoked token."}`, check that you copied the whole token.
+The answer contains the bot's name. `{"detail":"Invalid or revoked token."}` means the token was
+not copied completely.
+
+**2. Start a practice table** against built-in opponents (results do not count):
+
+```bash
+curl -X POST -H "Authorization: Bearer pk_TOKEN" https://poker.example.com/api/v1/bot/practice
+```
+
+The response includes a `watch_url` for following the table in the browser.
+
+**3. Ask for a turn.**
+
+```bash
+curl -H "Authorization: Bearer pk_TOKEN" "https://poker.example.com/api/v1/bot/turn?wait=25"
+```
+
+The JSON contains the hole cards, the board, the pot and, most importantly, `legal`: the moves
+that are allowed right now.
+
+**4. Send an action** with the `turn_id` from step 3:
+
+```bash
+curl -X POST -H "Authorization: Bearer pk_TOKEN" -H "Content-Type: application/json" \
+     -d '{"turn_id": "t_...", "action": "call"}' \
+     https://poker.example.com/api/v1/bot/action
+```
+
+A decision has to arrive within 15 seconds, otherwise the server checks or folds on the bot's
+behalf. Doing this by hand works but is tight; it is mainly useful to see the data.
 
 <details>
-<summary>What is curl and do I have it?</summary>
+<summary>curl options used above</summary>
 
-`curl` is a small command line program that sends HTTP requests. It's preinstalled on macOS, Linux
-and Windows 10/11 (in PowerShell type `curl.exe` instead of `curl`, because `curl` there is an alias
-for something else).
-
-- `-H "Name: value"` adds a **header** to the request. Here it sends your token.
-- Without `-X` curl sends a `GET` request.
-- `-X POST -d '{"a":1}' -H "Content-Type: application/json"` would send a POST with a JSON body.
-
-You never need curl for your bot. It's just handy for trying things out.
+- `-H "Name: value"` adds a request header (here: the token, and the body format).
+- `-X POST` changes the method from the default `GET` to `POST`.
+- `-d '...'` sends the given text as the request body.
 </details>
-
-### Step 2: Get a starter bot
-
-The repository has a ready-to-run starter bot for **Python, Java, Go, C++ and JavaScript** in the
-`bots/` folder. Each is a single file of about 150 lines and uses only the standard library
-(C++ needs libcurl). Pick your language and copy that folder.
-
-| Language | File | Run with |
-|---|---|---|
-| Python 3.8+ | `bots/python/bot.py` | `python3 bot.py` |
-| Java 17+ | `bots/java/Bot.java` | `java Bot.java` |
-| Go 1.21+ | `bots/go/main.go` | `go run .` |
-| C++17 | `bots/cpp/bot.cpp` | `make && ./bot` |
-| Node.js 18+ | `bots/javascript/bot.mjs` | `node bot.mjs` |
-
-The [language guides](#/docs/language-guides) explain the setup for each language in detail.
-
-### Step 3: Tell the bot your token
-
-The starter bots read two **environment variables**:
-
-- `POKER_TOKEN`: your token (required)
-- `POKER_URL`: the server address (optional, `http://localhost:8000` if not set)
-
-macOS / Linux:
-
-```bash
-export POKER_TOKEN="pk_YOUR_TOKEN"
-export POKER_URL="https://poker.example.com"
-```
-
-Windows PowerShell:
-
-```powershell
-$env:POKER_TOKEN = "pk_YOUR_TOKEN"
-$env:POKER_URL = "https://poker.example.com"
-```
 
 <details>
-<summary>What is an environment variable, and why not just put the token in the code?</summary>
+<summary>Keeping the token out of the source code</summary>
 
-An environment variable is a named value that lives in your terminal session. Every program you start
-from that terminal can read it (`os.environ` in Python, `System.getenv` in Java, `os.Getenv` in Go,
-`std::getenv` in C++, `process.env` in Node).
-
-Keeping the token out of the source code means you can share your code (on GitHub, say) without
-leaking your token. Anyone who has your token can play **as your bot**.
-
-The variables only last as long as the terminal window. Put the `export` lines into `~/.zshrc` /
-`~/.bashrc` (macOS/Linux) to keep them, or use a `.env` file your program reads (and don't commit it!).
-
-In an IDE (IntelliJ, VS Code, CLion, ...) you can set environment variables in the run configuration.
+A common approach is to read the token from an environment variable (for example `POKER_TOKEN`)
+or from a configuration file that is excluded from version control. Anyone holding the token can
+play as that bot, so it should not end up in a public repository. If a token leaks, the organizer
+can issue a new one; the old token stops working immediately.
 </details>
 
-### Step 4: Practice against house bots
+## Swagger UI
 
-Start the bot with the `practice` argument:
+The server documents itself at [/docs](https://poker.example.com/docs). After clicking
+*Authorize* and entering the token, every endpoint can be called from the browser with
+*Try it out*. Each call also shows the equivalent `curl` command. The machine-readable
+specification is available at [/openapi.yaml](https://poker.example.com/openapi.yaml).
 
-```bash
-python3 bot.py practice
-```
+## Practice and tournaments
 
-This opens a **private practice table** against three built-in bots:
-
-- **Randy Random** plays randomly.
-- **Carl Callstation** calls everything.
-- **Tina Tight** only plays good hands.
-
-The bot prints a link like `https://poker.example.com/#/table/p_ab12cd`. Open it to watch your
-bot play. Practice results don't count for anything, so break things as much as you like.
-
-### Step 5: Join a tournament
-
-Tournaments are scheduled in advance; you can see them in the **Lobby**. The starter bots
-automatically register for every open tournament when they start, and they check for new ones every
-5 minutes. To join, just keep your bot running until the tournament begins.
-
-When the tournament starts, your turns arrive through the same `GET /turn` loop, so you don't need
-any extra code.
-
-### Step 6: Make it smart
-
-Open the starter bot and find the function `decide(state)`. That's the only place you need to change.
-It gets the full game state and returns an action. The starter strategy is deliberately dumb.
-[Strategy tips](#/docs/strategy) has plenty of ideas.
+- **Practice tables** (`POST /api/v1/bot/practice`) seat a bot against built-in opponents and can
+  be started at any time. They are the intended way to test a bot.
+- **Tournaments** are scheduled in advance and listed in the lobby. A bot signs up with
+  `POST /api/v1/bot/tournaments/{id}/register` and only needs to be running and polling when the
+  tournament starts. Turns arrive through the same `GET /turn` loop.
 
 ## House rules
 
-- **One bot per person per tournament.** You can have several bots, but only one of them
-  may play in any given tournament.
-- **No teamwork between bots.** Bots must not share information or work together (that's called
-  "collusion" in poker).
-- **Be nice to the server.** It's a Raspberry Pi. Use the long-poll (`wait=25`) and don't send
-  hundreds of requests per second. Empty requests are limited to 60 per second.
-- **Keep your token secret.** If it leaks, ask the organizer for a new one.
-- **Bugs in the server** are not a strategy. Report them, and you get eternal glory.
+- One bot per person per tournament.
+- Bots must not share information or cooperate with each other.
+- The server is a Raspberry Pi: bots should use the long-poll (`wait=25`) rather than polling in
+  a tight loop. Requests that achieve nothing are limited to 60 per second.
+- Tokens are personal and should be kept private.
+- Server bugs should be reported rather than exploited.
 
-## Where to go next
+## Further reading
 
-- [HTTP & REST for beginners](#/docs/web-basics): requests, JSON, status codes, bearer tokens and long polling.
-- [Poker rules](#/docs/poker-rules): how Texas Hold'em and the tournaments work.
+- [HTTP basics](#/docs/web-basics): requests, JSON, status codes, bearer tokens and long polling.
+- [Poker rules](#/docs/poker-rules): Texas Hold'em and the tournament format.
 - [API reference](#/docs/api-reference): every endpoint and field.
-- [Game loop & timeouts](#/docs/game-loop): what happens when your bot is slow or crashes.
-- **Swagger UI** at [/docs](https://poker.example.com/docs): try every endpoint in the browser.
-  Click *Authorize*, paste your token, then *Try it out*.
+- [Game loop & timeouts](#/docs/game-loop): pacing, time limits and failure handling.
+- [Strategy notes](#/docs/strategy): ideas for better decisions.
+- [FAQ](#/docs/faq): common errors and their causes.

@@ -1,21 +1,18 @@
-# Starter bots
+# Test bots
 
-Each folder holds a complete, runnable bot that uses only the standard library
-(C++ additionally needs libcurl). They all work the same way:
+Very simple bots, used to try out the server (and by `scripts/demo.sh`). They are not meant as
+templates. A bot can be written in any language; the protocol is described in the docs.
 
-1. check the token (`GET /api/v1/bot/me`),
-2. register for open tournaments,
-3. loop: `GET /api/v1/bot/turn?wait=25` → `decide(state)` → `POST /api/v1/bot/action`.
-
-Change `decide()` to make your bot smarter. Everything else is plumbing.
-
-| Language | Run |
+| File | Behaviour |
 |---|---|
-| Python 3.8+ | `python3 python/bot.py [practice]` |
-| Java 17+ | `java java/Bot.java [practice]` |
-| Go 1.21+ | `cd go && go run . [practice]` |
-| C++17 + libcurl | `cd cpp && make && ./bot [practice]` |
-| Node.js 18+ | `node javascript/bot.mjs [practice]` |
+| `caller.py` | checks or calls everything |
+| `random_bot.py` | random legal action, small raises |
+| `tight.py` | plays only pairs and two high cards |
+| `aggressive.py` | raises the pot when unraised, all-in when short |
 
-Set `POKER_TOKEN` (your token) and `POKER_URL` (default `http://localhost:8000`) first.
-The full guide is on the website under **Docs** (English + Deutsch).
+`pokerbot.py` holds the shared HTTP loop (standard library only, Python 3.8+).
+
+```bash
+POKER_TOKEN=pk_... POKER_URL=http://localhost:8000 python3 bots/tight.py
+POKER_TOKEN=pk_... python3 bots/caller.py practice     # start a practice table first
+```

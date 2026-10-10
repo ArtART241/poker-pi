@@ -2,13 +2,13 @@
 
 Basis-URL: `https://poker.example.com`. Alle Bodies sind JSON (`Content-Type: application/json`).
 
-Jeder Endpunkt unter `/api/v1/bot/` braucht den Header
+Jeder Endpunkt unter `/api/v1/bot/` erfordert den Header
 
 ```
-Authorization: Bearer <dein Token>
+Authorization: Bearer <token>
 ```
 
-Die interaktive Version dieser Seite, in der du jeden Request ausprobieren kannst, ist die
+Eine interaktive Fassung dieser Seite, in der sich jeder Request ausprobieren lässt, ist die
 [Swagger UI](https://poker.example.com/docs). Die maschinenlesbare Spezifikation liegt unter
 [/openapi.yaml](https://poker.example.com/openapi.yaml).
 
@@ -16,28 +16,29 @@ Die interaktive Version dieser Seite, in der du jeden Request ausprobieren kanns
 
 | Methode | Pfad | Zweck |
 |---|---|---|
-| `GET` | `/api/v1/bot/me` | Wer bin ich? Gut, um den Token zu testen. |
-| `GET` | `/api/v1/bot/turn?wait=25` | **Auf deinen Zug warten** (Long-Poll). |
-| `POST` | `/api/v1/bot/action` | **Deine Entscheidung schicken.** |
-| `GET` | `/api/v1/bot/tournaments` | Kommende, laufende und letzte Turniere. |
+| `GET` | `/api/v1/bot/me` | Identität des Bots; geeignet zum Testen des Tokens. |
+| `GET` | `/api/v1/bot/turn?wait=25` | **Auf einen Zug warten** (Long-Poll). |
+| `POST` | `/api/v1/bot/action` | **Eine Entscheidung senden.** |
+| `GET` | `/api/v1/bot/tournaments` | Kommende, laufende und kürzlich beendete Turniere. |
 | `POST` | `/api/v1/bot/tournaments/{id}/register` | Für ein Turnier anmelden. |
 | `DELETE` | `/api/v1/bot/tournaments/{id}/register` | Abmelden (vor dem Start). |
 | `POST` | `/api/v1/bot/practice` | Übungstisch gegen Haus-Bots starten. |
-| `GET` | `/api/v1/bot/practice` | Status deines Übungstischs. |
+| `GET` | `/api/v1/bot/practice` | Status des Übungstischs. |
 | `DELETE` | `/api/v1/bot/practice` | Übungstisch beenden. |
-| `GET` | `/api/v1/bot/hands` | Beendete Hände, an denen du beteiligt warst. |
-| `GET` | `/api/v1/bot/hands/{id}` | Kompletter Verlauf einer beendeten Hand (alle Karten). |
+| `GET` | `/api/v1/bot/hands` | Beendete Hände, an denen der Bot beteiligt war. |
+| `GET` | `/api/v1/bot/hands/{id}` | Vollständiger Verlauf einer beendeten Hand (alle Karten). |
 
 ## GET /api/v1/bot/turn
 
-Wartet, bis dein Bot eine Entscheidung treffen muss, und liefert dann den kompletten Spielzustand.
+Wartet, bis der Bot eine Entscheidung treffen muss, und liefert dann den vollständigen Spielzustand.
 
 | Query-Parameter | Standard | Bedeutung |
 |---|---|---|
-| `wait` | `25` | Sekunden zu warten (0 bis 30). Passiert in der Zeit nichts: `204 No Content`. |
-| `table_id` | keiner | Nur auf Züge an diesem Tisch warten (praktisch, wenn du gleichzeitig an einem Übungstisch *und* einem Turnier spielst). |
+| `wait` | `25` | Wartezeit in Sekunden (0 bis 30). Passiert in dieser Zeit nichts: `204 No Content`. |
+| `table_id` | keiner | Nur auf Züge an diesem Tisch warten (nützlich, wenn ein Bot gleichzeitig an einem Übungstisch *und* in einem Turnier spielt). |
 
-**Antworten:** `200` mit dem Zustand unten, oder `204` mit **leerem Body** (einfach nochmal fragen).
+**Antworten:** `200` mit dem unten gezeigten Zustand, oder `204` mit **leerem Body** (keine
+Entscheidung fällig; erneut fragen).
 
 ```json
 {
@@ -77,41 +78,40 @@ Wartet, bis dein Bot eine Entscheidung treffen muss, und liefert dann den komple
 
 | Feld | Bedeutung |
 |---|---|
-| `turn_id` | Kennzeichnet diese Entscheidung. Schick sie mit deiner Aktion zurück. |
-| `deadline_ms` | Verbleibende Millisekunden zum Antworten. Danach checkt (wenn möglich) oder foldet der Server für dich. |
+| `turn_id` | Kennzeichnet diese Entscheidung; sie muss mit der Aktion zurückgeschickt werden. |
+| `deadline_ms` | Verbleibende Millisekunden. Danach checkt (wenn möglich) oder foldet der Server für den Bot. |
 | `table_id`, `tournament_id`, `practice` | Wo die Hand gespielt wird. `tournament_id` ist an Übungstischen `null`. |
-| `hand_id` | Global eindeutige ID der Hand (später für `/hands/{id}`). |
+| `hand_id` | Global eindeutige ID der Hand (für `/hands/{id}`). |
 | `hand_no` | Nummer der Hand an diesem Tisch: 1, 2, 3, ... |
-| `seat` | Dein Platz, 0 bis 8. Die Plätze gehen im Uhrzeigersinn um den Tisch. |
-| `hole_cards` | Deine zwei privaten Karten. |
-| `stack` | Deine Chips **dahinter**, ohne das, was du schon gesetzt hast. |
-| `bet` | Was du **auf dieser Straße** schon gesetzt hast. |
+| `seat` | Platz des Bots, 0 bis 8, im Uhrzeigersinn. |
+| `hole_cards` | Die zwei privaten Karten des Bots. |
+| `stack` | Chips **dahinter**, ohne bereits gesetzte Chips. |
+| `bet` | Auf **dieser Straße** bereits gesetzte Chips. |
 | `street` | `preflop`, `flop`, `turn` oder `river`. |
 | `board` | Gemeinschaftskarten: 0, 3, 4 oder 5. |
-| `pot` | **Alle** Chips in der Mitte, inklusive aller Einsätze der aktuellen Straße. |
+| `pot` | **Alle** Chips in der Mitte, einschließlich aller Einsätze der aktuellen Straße. |
 | `current_bet` | Der höchste Einsatz auf dieser Straße. |
-| `to_call` | Chips, die du mit einem Call dazulegen würdest (0, wenn du checken kannst). |
+| `to_call` | Chips, die ein Call hinzufügen würde (0, wenn Checken möglich ist). |
 | `legal.fold` | Immer `true`. |
-| `legal.check` | `true`, wenn du checken darfst. |
-| `legal.call` | Chips, die ein Call dazulegt, oder `null`, wenn es nichts zu callen gibt. Kann kleiner als `current_bet - bet` sein, wenn du zu wenig hast (All-in-Call). |
-| `legal.raise` | `{"min", "max"}` für **Raise AUF**, oder `null`, wenn du nicht raisen darfst. `max` = All-in. |
-| `blinds` | Aktueller Small/Big Blind, Ante, Level-Nummer und Hände bis zur nächsten Erhöhung. |
+| `legal.check` | `true`, wenn Checken erlaubt ist. |
+| `legal.call` | Chips, die ein Call hinzufügen würde, oder `null`, wenn es nichts zu callen gibt. Kann bei einem kurzen Stack kleiner als `current_bet - bet` sein (All-in-Call). |
+| `legal.raise` | `{"min", "max"}` für **Raise auf**, oder `null`, wenn Raisen nicht erlaubt ist. `max` = All-in. |
+| `blinds` | Aktueller Small/Big Blind, Ante, Level und Anzahl Hände bis zur nächsten Erhöhung. |
 | `button` | Platz des Dealer-Buttons. |
-| `players` | Alle Spieler dieser Hand, nach Platz sortiert. `status` ist `active`, `folded` oder `all_in`. `committed` ist, was sie in der ganzen Hand in den Pot gelegt haben. |
-| `action_log` | Alles Öffentliche, was in dieser Hand bisher passiert ist, in Reihenfolge. |
+| `players` | Alle Spieler dieser Hand, nach Platz sortiert. `status` ist `active`, `folded` oder `all_in`. `committed` ist der Gesamteinsatz in dieser Hand. |
+| `action_log` | Alle öffentlichen Ereignisse dieser Hand in Reihenfolge. |
 
 <details>
-<summary>Wie finde ich meine Position relativ zum Button?</summary>
+<summary>Position relativ zum Button</summary>
 
-```python
-seats = [p["seat"] for p in state["players"]]          # nach Platz sortiert
-n = len(seats)
-button_idx = seats.index(state["button"])
-my_idx = seats.index(state["seat"])
-position = (my_idx - button_idx) % n   # 0 = Button, 1 = Small Blind, 2 = Big Blind, ...
+Aus `players` (nach Platz sortiert) werden die Platznummern genommen und darin der Index des
+Button-Platzes und des eigenen Platzes bestimmt. Bei `n` Spielern gilt:
+
+```
+position = (eigener_index - button_index) mod n      0 = Button, 1 = Small Blind, 2 = Big Blind, ...
 ```
 
-Mit nur 2 Spielern (Heads-up) *ist* der Button der Small Blind.
+Bei zwei Spielern (Heads-up) ist der Button zugleich der Small Blind.
 </details>
 
 ## POST /api/v1/bot/action
@@ -124,44 +124,44 @@ Mit nur 2 Spielern (Heads-up) *ist* der Button der Small Blind.
 |---|---|
 | `turn_id` | Aus `GET /turn`. |
 | `action` | `fold`, `check`, `call` oder `raise`. |
-| `amount` | Nur bei `raise`: der **Gesamt**einsatz, **auf** den du erhöhst (zwischen `legal.raise.min` und `max`). |
+| `amount` | Nur bei `raise`: der **Gesamt**einsatz, **auf** den erhöht wird (zwischen `legal.raise.min` und `max`). |
 
-Um dir das Leben leichter zu machen, akzeptiert der Server auch:
-- `"bet"` als anderes Wort für `raise`,
-- `"allin"` / `"all_in"`: auf das Maximum raisen (oder callen, wenn Raisen nicht möglich ist),
-- `"call"`, wenn es nichts zu callen gibt: Das zählt als `check`.
+Zusätzlich akzeptiert der Server:
+- `"bet"` als Synonym für `raise`,
+- `"allin"` / `"all_in"`: Raise auf das Maximum (oder Call, wenn Raisen nicht möglich ist),
+- `"call"`, wenn es nichts zu callen gibt: wird als `check` behandelt.
 
 **Antworten:**
 
 | Code | Body | Bedeutung |
 |---|---|---|
-| `200` | `{"accepted": true, "action": "raise", "amount": 120}` | Angenommen. `action` ist, was tatsächlich ausgeführt wurde (z. B. `check`, wenn du `call` ohne offenen Einsatz geschickt hast). |
-| `422` | `{"detail": "raise amount 25 is out of range: raise TO between 40 and 1480"}` | Nicht erlaubt. **Der Zug ist noch offen**, du kannst vor der Deadline eine korrigierte Aktion schicken. |
-| `409` | `{"detail": "this turn is no longer open ..."}` | Zu spät, der Zug ist abgelaufen, oder du hast schon anders geantwortet. |
+| `200` | `{"accepted": true, "action": "raise", "amount": 120}` | Angenommen. `action` ist die tatsächlich ausgeführte Aktion (z. B. `check`, wenn `call` ohne offenen Einsatz gesendet wurde). |
+| `422` | `{"detail": "raise amount 25 is out of range: raise TO between 40 and 1480"}` | Nicht erlaubt. **Der Zug bleibt offen**; vor Ablauf der Frist kann eine korrigierte Aktion gesendet werden. |
+| `409` | `{"detail": "this turn is no longer open ..."}` | Der Zug ist abgelaufen oder wurde bereits anders beantwortet. |
 | `403` | `{"detail": "this turn belongs to another bot"}` | Falsche `turn_id`. |
 
-**Exakt denselben** Request zweimal zu schicken (z. B. als Retry nach einem Netzwerkfehler) ist
-unproblematisch und liefert wieder `200`.
+**Exakt denselben** Request zweimal zu senden (etwa als Wiederholung nach einem Netzwerkfehler)
+ist unbedenklich und liefert erneut `200`.
 
-> **Validierungsfehler:** Ist der Body kaputt (kein JSON, `turn_id` fehlt, `amount` ist keine Zahl),
-> bekommst du `422` mit `detail` als **Liste**, die das Problem beschreibt, z. B.
+> **Validierungsfehler:** Ist der Body fehlerhaft (kein JSON, `turn_id` fehlt, `amount` keine Zahl),
+> lautet die Antwort `422` mit `detail` als **Liste**, die das Problem beschreibt, z. B.
 > `{"detail": [{"type": "missing", "loc": ["body", "turn_id"], "msg": "Field required"}]}`.
 
 ## Events im `action_log`
 
-Jeder Eintrag hat einen `type`. Platzbezogene Events haben außerdem `seat` und `name`.
+Jeder Eintrag hat einen `type`. Platzbezogene Events enthalten außerdem `seat` und `name`.
 
 | `type` | Felder | Bedeutung |
 |---|---|---|
 | `hand_start` | `hand_id`, `hand_no`, `level`, `button`, `small_blind`, `big_blind`, `ante`, `players[{seat, name, player_id, stack}]` | Eine neue Hand. Stacks *vor* den Blinds. |
 | `post` | `blind` (`small` / `big` / `ante`), `amount`, `all_in` | Pflichteinsatz. |
-| `action` | `street`, `action`, `amount`, `bet`, `stack`, `all_in`, `pot` | Ein Spieler hat gehandelt. `amount`: dazugelegte Chips bei `call`, neuer Gesamteinsatz bei `raise`, `null` bei `fold` / `check`. `bet` / `stack` gelten nach der Aktion. |
+| `action` | `street`, `action`, `amount`, `bet`, `stack`, `all_in`, `pot` | Ein Spieler hat gehandelt. `amount`: hinzugefügte Chips bei `call`, neuer Gesamteinsatz bei `raise`, `null` bei `fold` / `check`. `bet` / `stack` gelten nach der Aktion. |
 | `street` | `street`, `cards` (neue Karten), `board` (alle), `pot` | Flop, Turn oder River ausgeteilt. |
 | `uncalled` | `amount` | Ein nicht gecallter Teil eines Einsatzes wurde zurückgegeben. |
-| `showdown` | `hands[{seat, name, cards}]` | Karten aufgedeckt. Passiert am Ende oder früher, wenn alle All-in sind. |
-| `win` | `pot` (0 = Hauptpot, 1+ = Side Pots), `amount`, `winners[{seat, name, amount}]`, `hand` (z. B. `"Two Pair"`, `null`, wenn keiner zeigen musste) | Wer welchen Pot gewonnen hat. |
+| `showdown` | `hands[{seat, name, cards}]` | Karten aufgedeckt. Am Ende oder früher, wenn alle All-in sind. |
+| `win` | `pot` (0 = Hauptpot, 1+ = Side Pots), `amount`, `winners[{seat, name, amount}]`, `hand` (z. B. `"Two Pair"`, `null` ohne Showdown) | Wer welchen Pot gewonnen hat. |
 | `hand_end` | `board`, `results[{seat, name, player_id, start_stack, stack, net, cards}]` | Endergebnis (nur in beendeten Händen). |
-| `player_status` | `status`: `timeout`, `sitting_out`, `disconnected`, `connected`, `back` | Mit der Verbindung eines Bots ist etwas passiert (siehe [Spielablauf](#/docs/game-loop)). |
+| `player_status` | `status`: `timeout`, `sitting_out`, `disconnected`, `connected`, `back` | Änderung der Verbindung eines Bots (siehe [Spielablauf](#/docs/game-loop)). |
 
 ## Turniere
 
@@ -179,13 +179,13 @@ Jeder Eintrag hat einen `type`. Platzbezogene Events haben außerdem `seat` und 
 ```
 
 `status` ist `registering` (Anmeldung offen), `running`, `finished` oder `cancelled`. Zeiten sind in
-UTC (ISO 8601). `registered` sagt, ob **dein** Bot angemeldet ist.
+UTC (ISO 8601). `registered` gibt an, ob der anfragende Bot angemeldet ist.
 
 ### POST / DELETE /api/v1/bot/tournaments/{id}/register
 
-An- oder abmelden. Antwort: `{"tournament_id": 7, "registered": true}`. Du bekommst `409`, wenn das
-Turnier schon läuft oder voll ist (9 Bots, wer zuerst kommt). Sind zur Startzeit weniger als 2 Bots
-angemeldet, wird das Turnier abgesagt.
+An- oder Abmeldung. Antwort: `{"tournament_id": 7, "registered": true}`. Die Antwort ist `409`, wenn
+das Turnier bereits läuft oder voll ist (9 Bots, Reihenfolge der Anmeldung). Sind zur Startzeit
+weniger als 2 Bots angemeldet, wird das Turnier abgesagt.
 
 ## Übungstische
 
@@ -197,30 +197,29 @@ angemeldet, wird das Turnier abgesagt.
 
 Alle Felder sind optional. `opponents` darf jeden Typ mehrfach enthalten (1 bis 8 Gegner):
 
-| Typ | Name | Spielt |
+| Typ | Name | Spielweise |
 |---|---|---|
 | `random` | Randy Random | zufällige Züge |
 | `station` | Carl Callstation | callt immer, raist nie |
 | `tight` | Tina Tight | nur gute Hände, setzt starke Hände |
 
-`speed`: `fast` (keine Pausen, viele Hände pro Minute) oder `live` (gleiches Tempo wie im Turnier,
-schön zum Zuschauen).
+`speed`: `fast` (keine Pausen, viele Hände pro Minute) oder `live` (Turniertempo, zum Zuschauen geeignet).
 
-Die Antwort enthält `table_id` und `watch_url`, den Link, um den Tisch im Browser anzuschauen.
-Deine Züge kommen über das normale `GET /turn`. Der Tisch endet, wenn dein Bot pleite ist oder
-gewinnt, nicht mehr nach Zügen fragt, oder nach 300 Händen. Ein neues `POST /practice` ersetzt den
-alten Tisch. `GET /practice` zeigt den Status, `DELETE /practice` beendet ihn.
+Die Antwort enthält `table_id` und `watch_url`, den Link zum Tisch im Browser. Die Züge kommen über
+das normale `GET /turn`. Der Tisch endet, wenn der Bot ausscheidet oder gewinnt, keine Züge mehr
+abfragt oder nach 300 Händen. Ein neues `POST /practice` ersetzt den alten Tisch.
+`GET /practice` zeigt den Status, `DELETE /practice` beendet ihn.
 
 ## Hand-Historie
 
-- `GET /api/v1/bot/hands?tournament_id=7&limit=50`: deine beendeten Hände, neueste zuerst. Weitere
+- `GET /api/v1/bot/hands?tournament_id=7&limit=50`: beendete Hände des Bots, neueste zuerst. Weitere
   Filter: `table_id`; zum Blättern `before=<hand id>`.
-- `GET /api/v1/bot/hands/{id}`: die komplette Event-Liste **inklusive aller Hole Cards** (auch von
-  Spielern, die gefoldet haben). Nur für beendete Hände.
+- `GET /api/v1/bot/hands/{id}`: die vollständige Event-Liste **einschließlich aller Hole Cards**
+  (auch von Spielern, die gefoldet haben). Nur für beendete Hände.
 
 ## Öffentliche Endpunkte (ohne Token)
 
-Die nutzt die Webseite. Dein Bot darf sie auch nutzen, z. B. für Statistiken.
+Diese nutzt die Webseite; Bots können sie ebenfalls verwenden, z. B. für Statistiken.
 
 | Pfad | Inhalt |
 |---|---|

@@ -8,6 +8,8 @@
   import Bots from "./pages/Bots.svelte";
   import BotProfile from "./pages/BotProfile.svelte";
   import Docs from "./pages/Docs.svelte";
+  import CardGallery from "./pages/CardGallery.svelte";
+  import Settings from "./lib/Settings.svelte";
 
   const page = $derived(route.parts[0] ?? "");
   const arg = $derived(route.parts.slice(1).map(decodeURIComponent).join("/"));
@@ -30,6 +32,7 @@
       {/each}
       <a href="/docs" target="_blank" rel="noopener">API ↗</a>
     </nav>
+    <Settings />
   </div>
 </header>
 
@@ -48,6 +51,8 @@
     <Bots />
   {:else if page === "bot"}
     <BotProfile name={arg} />
+  {:else if page === "cards"}
+    <CardGallery />
   {:else if page === "docs"}
     <Docs slug={arg} />
   {:else}
@@ -79,6 +84,7 @@
   nav a:hover { color: var(--text); text-decoration: none; background: var(--surface-2); }
   nav a.active { color: var(--text); background: var(--surface-2); }
   .burger { display: none; margin-left: auto; }
+  @media (max-width: 640px) { .inner :global(.settings) { margin-left: 0.5rem; } }
   main { padding-block: 1.5rem 3rem; min-height: 70vh; }
   footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; padding-block: 1.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
   @media (max-width: 640px) {

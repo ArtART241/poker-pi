@@ -11,11 +11,14 @@ export function emptyTable() {
     street: null,
     board: [],
     pot: 0, // everything in the middle, including current bets
-    seats: {}, // seat -> { seat, name, stack, bet, status, cards, label, winner, connection }
+    seats: {}, // seat -> { seat, name, stack, bet, status, cards, action: { kind, text }, winner, connection }
     toAct: null, // { seat, until } (live only)
     log: [], // [{ text, kind }]
     winners: [],
     finished: false,
+    seq: 0, // counts applied events (used to animate only forward steps)
+    flash: null, // { seat, kind, text, seq }: the action that just happened (for the pop-up)
+    lastWin: null, // { seq, winners: [{ seat, amount }] }
   };
 }
 
@@ -42,6 +45,8 @@ function say(state, text, kind = "info") {
 export function apply(prev, ev, { now = Date.now() } = {}) {
   const s = clone(prev);
   const seat = ev.seat !== undefined ? s.seats[ev.seat] : undefined;
+  s.seq += 1;
+  s.flash = null;
 
   switch (ev.type) {
     case "hand_start": {
@@ -55,7 +60,7 @@ export function apply(prev, ev, { now = Date.now() } = {}) {
           bet: 0,
           status: "active",
           cards: null,
-          label: "",
+          action: null,
           winner: false,
           connection: old[p.seat]?.connection ?? null,
         };
@@ -72,6 +77,7 @@ export function apply(prev, ev, { now = Date.now() } = {}) {
         toAct: null,
         winners: [],
         finished: false,
+        lastWin: null,
       });
       say(s, `Hand #${ev.hand_no ?? ev.hand_id} - blinds ${ev.small_blind}/${ev.big_blind}${ev.ante ? ` ante ${ev.ante}` : ""}`, "hand");
       break;
@@ -82,28 +88,35 @@ export function apply(prev, ev, { now = Date.now() } = {}) {
       if (ev.blind !== "ante") seat.bet += ev.amount;
       if (ev.all_in) seat.status = "all_in";
       s.pot += ev.amount;
-      seat.label = ev.blind === "ante" ? "Ante" : ev.blind === "small" ? "Small blind" : "Big blind";
+      seat.action = {
+        kind: "blind",
+        text: `${ev.blind === "ante" ? "Ante" : ev.blind === "small" ? "Small blind" : "Big blind"} ${ev.amount}`,
+      };
       break;
     case "deal_hole": // only present in replays
       if (seat) seat.cards = ev.cards;
       break;
     case "action": {
       if (!seat) break;
+      const facing = Math.max(0, ...Object.values(s.seats).map((p) => p.bet));
       seat.stack = ev.stack;
       seat.bet = ev.bet;
       s.pot = ev.pot;
       if (ev.action === "fold") seat.status = "folded";
       else if (ev.all_in) seat.status = "all_in";
-      const label = actionLabel(ev);
-      seat.label = label;
+      // the first chips put in on a street are a "bet", everything after that a "raise"
+      const text = ev.action === "raise" && facing === 0 && !ev.all_in ? `Bet ${ev.amount}` : actionLabel(ev);
+      const kind = actionKind(ev);
+      seat.action = { kind, text };
+      s.flash = { seat: ev.seat, kind, text, seq: s.seq };
       s.toAct = null;
-      say(s, `${ev.name} ${label.toLowerCase()}`, ev.action);
+      say(s, `${ev.name} ${text.toLowerCase()}`, kind);
       break;
     }
     case "street":
       for (const p of Object.values(s.seats)) {
         p.bet = 0;
-        if (p.status !== "folded") p.label = "";
+        if (p.status !== "folded") p.action = null;
       }
       s.board = ev.board;
       s.street = ev.street;
@@ -128,9 +141,10 @@ export function apply(prev, ev, { now = Date.now() } = {}) {
         if (!p) continue;
         p.stack += w.amount;
         p.winner = true;
-        p.label = ev.hand ? `Wins ${w.amount} - ${ev.hand}` : `Wins ${w.amount}`;
+        p.action = { kind: "win", text: ev.hand ? `Won ${w.amount} · ${ev.hand}` : `Won ${w.amount}` };
         s.winners.push(w.seat);
       }
+      s.lastWin = { seq: s.seq, winners: ev.winners.map((w) => ({ seat: w.seat, amount: w.amount })) };
       s.pot -= ev.amount;
       say(
         s,
@@ -173,16 +187,22 @@ export function apply(prev, ev, { now = Date.now() } = {}) {
 export function actionLabel(ev) {
   switch (ev.action) {
     case "fold":
-      return "Folds";
+      return "Folded";
     case "check":
-      return "Checks";
+      return "Checked";
     case "call":
-      return ev.all_in ? `Calls ${ev.amount} (all-in)` : `Calls ${ev.amount}`;
+      return ev.all_in ? `All-in ${ev.bet}` : `Called ${ev.bet}`; // the bet matched, like "calls 60"
     case "raise":
-      return ev.all_in ? `All-in ${ev.amount}` : `Raises to ${ev.amount}`;
+      return ev.all_in ? `All-in ${ev.amount}` : `Raised to ${ev.amount}`;
     default:
       return ev.action;
   }
+}
+
+// fold | check | call | raise | allin (used for colours and sounds)
+export function actionKind(ev) {
+  if (ev.all_in && ev.action !== "fold" && ev.action !== "check") return "allin";
+  return ev.action;
 }
 
 function statusText(status) {
@@ -211,7 +231,7 @@ export function fromSnapshot(snap) {
     s = replay(snap.events);
   } else {
     for (const p of snap.seats) {
-      s.seats[p.seat] = { seat: p.seat, name: p.name, stack: p.stack, bet: 0, status: "active", cards: null, label: "", winner: false, connection: null };
+      s.seats[p.seat] = { seat: p.seat, name: p.name, stack: p.stack, bet: 0, status: "active", cards: null, action: null, winner: false, connection: null };
     }
     s.button = snap.button;
   }
@@ -223,5 +243,6 @@ export function fromSnapshot(snap) {
     s.toAct = { seat: snap.waiting_on.seat, until: Date.now() + snap.waiting_on.remaining_ms, total: snap.waiting_on.remaining_ms };
   }
   s.level = snap.blinds?.level ?? s.level;
+  s.flash = null; // don't pop up an old action when (re)connecting
   return s;
 }

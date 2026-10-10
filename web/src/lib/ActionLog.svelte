@@ -23,5 +23,20 @@
   .win { color: var(--good); font-weight: 700; }
   .showdown { font-style: italic; }
   .status, .out { color: var(--bad); }
-  .fold { color: var(--muted); }
+  .line.fold { color: var(--muted); }
+  .line.check::before, .line.call::before, .line.raise::before, .line.allin::before {
+    content: "";
+    display: inline-block;
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    margin-right: 0.5em;
+    vertical-align: 0.05em;
+  }
+  .line.check::before { background: #3b82f6; }
+  .line.call::before { background: #16a34a; }
+  .line.raise::before { background: #ea580c; }
+  .line.raise { font-weight: 600; }
+  .line.allin::before { background: #dc2626; }
+  .line.allin { font-weight: 800; color: #ef4444; }
 </style>

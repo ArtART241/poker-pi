@@ -61,8 +61,18 @@ Environment variables (all optional):
 | `POKER_SITOUT_GRACE` | `3` | seconds a sitting-out bot gets per decision |
 | `POKER_DISCONNECT_AFTER` | `60` | seconds without any request until a bot counts as disconnected |
 | `POKER_RATE_LIMIT` | `60` | requests per second per bot |
+| `POKER_CARD_DECK` | `drawn` | default card style on the website: `drawn` or `artwork` (viewers can switch in the ⚙ menu) |
 
 Per-tournament settings (stack, blind speed, pacing) are options of `create-tournament`.
+
+## Website look: cards and sounds
+
+- **Card styles**: `drawn` (SVG drawn in code: `web/src/lib/cards/DrawnCard.svelte`) and `artwork`
+  (public-domain deck in `web/public/cards/artwork/`). `POKER_CARD_DECK` sets the default; every viewer
+  can switch in the ⚙ menu, and `#/cards` shows all 52 cards side by side. To drop a style, delete its
+  files and its entry in `DECKS` in `web/src/lib/settings.svelte.js` (see the artwork `LICENSE.md`).
+- **Sounds**: put recordings into `web/public/sounds/` (the README there lists the names), then
+  `cd web && npm run build`. Viewers turn sound on in the ⚙ menu.
 
 ## Deploying on a Raspberry Pi
 

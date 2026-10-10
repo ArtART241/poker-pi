@@ -9,6 +9,7 @@ from typing import AsyncIterator
 
 import yaml
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -69,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         swagger_ui_parameters={"persistAuthorization": True, "tryItOutEnabled": True},
     )
     app.state.hub = hub
+    app.add_middleware(GZipMiddleware, minimum_size=1000)  # SSE streams are excluded automatically
     app.include_router(bot.router)
     app.include_router(public.router)
 
@@ -82,6 +84,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                  media_type="application/yaml")
 
     static = Path(settings.static_dir)
+    audio_types = {".mp3", ".ogg", ".wav", ".m4a", ".webm", ".aac", ".flac"}
+
+    @app.get("/api/v1/public/config", include_in_schema=False)
+    async def web_config() -> dict[str, object]:
+        """Settings for the website: default card style and the recorded sound files that exist."""
+        sounds_dir = static / "sounds"
+        sounds = sorted(f.name for f in sounds_dir.iterdir()
+                        if f.is_file() and f.suffix.lower() in audio_types) if sounds_dir.is_dir() else []
+        return {"card_deck": settings.card_deck, "sounds": sounds}
+
     if (static / "index.html").exists():
         app.mount("/", WebFiles(directory=static, html=True), name="web")
     else:

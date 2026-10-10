@@ -27,6 +27,8 @@ class Settings:
     max_timeouts: int = field(default_factory=lambda: int(os.environ.get("POKER_MAX_TIMEOUTS", 3)))
     # a bot that has not polled /turn for this long counts as disconnected
     disconnect_after: float = field(default_factory=lambda: _env_float("POKER_DISCONNECT_AFTER", 60))
+    # default card style on the website: "drawn" or "artwork" (viewers can switch in the settings)
+    card_deck: str = field(default_factory=lambda: os.environ.get("POKER_CARD_DECK", "drawn"))
     max_wait: int = 30
     scheduler_interval: float = 1.0
     # requests per second a single bot may send (long-polls included)

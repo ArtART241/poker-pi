@@ -3,6 +3,7 @@
   import ActionLog from "./ActionLog.svelte";
   import { streamTable } from "./api.js";
   import { apply, emptyTable, fromSnapshot } from "./reducer.js";
+  import { soundForEvent } from "./sound.js";
 
   let { tableId, onHandEnd = () => {}, onFinished = () => {} } = $props();
 
@@ -22,6 +23,7 @@
           return;
         }
         table = apply(table, ev);
+        soundForEvent(ev);
         if (ev.type === "hand_end") onHandEnd(ev);
         if (ev.type === "table_status" && meta) meta = { ...meta, status: ev.status, finish_reason: ev.reason };
         if (ev.type === "table_status" && ev.status === "finished") onFinished();
@@ -38,7 +40,7 @@
   );
 </script>
 
-<div class="live grid-2">
+<div class="live">
   <div>
     <div class="bar">
       <span class="dot {connection}"></span>
@@ -62,6 +64,8 @@
 </div>
 
 <style>
+  .live { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1rem; }
+  @media (max-width: 1100px) { .live { grid-template-columns: minmax(0, 1fr); } }
   .bar { display: flex; gap: 0.5rem; align-items: center; font-size: 0.9rem; font-weight: 600; }
   .dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--muted); }
   .dot.live { background: #ef4444; box-shadow: 0 0 0 0 rgb(239 68 68 / 0.7); animation: pulse 1.6s infinite; }

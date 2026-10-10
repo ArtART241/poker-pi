@@ -4,6 +4,7 @@
   import { replay } from "../lib/reducer.js";
   import PokerTable from "../lib/PokerTable.svelte";
   import ActionLog from "../lib/ActionLog.svelte";
+  import { soundForEvent } from "../lib/sound.js";
 
   let { id } = $props();
   let hand = $state(null);
@@ -38,8 +39,12 @@
     const delay = 1100 / speed;
     if (!playing || !hand) return;
     const t = setTimeout(() => {
-      if (current < last) step = current + 1;
-      else playing = false;
+      if (current < last) {
+        step = current + 1;
+        // play the sound of the event we just stepped onto
+        const ev = hand.events[stops[step] - 1];
+        if (ev) soundForEvent(ev);
+      } else playing = false;
     }, delay);
     return () => clearTimeout(t);
   });
@@ -62,7 +67,7 @@
       <a class="btn" href="#/hand/{hand.id + 1}">Next →</a>
     </div>
   </div>
-  <div class="grid-2">
+  <div class="layout">
     <div>
       <PokerTable {table} subtitle={table.blinds ? `Blinds ${table.blinds.small}/${table.blinds.big}` : ""} />
       <div class="controls card-box">
@@ -93,6 +98,8 @@
 {/if}
 
 <style>
+  .layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1rem; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: minmax(0, 1fr); } }
   .head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
   .nav { display: flex; gap: 0.5rem; }
   .controls { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; padding: 0.6rem; }

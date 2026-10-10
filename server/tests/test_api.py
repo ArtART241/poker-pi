@@ -347,3 +347,15 @@ async def test_openapi_yaml_and_docs(env):
     assert r.status_code == 200 and "/api/v1/bot/turn" in r.text
     r = await client.get("/docs")
     assert r.status_code == 200
+
+
+async def test_web_config_lists_sounds(tmp_path):
+    static = tmp_path / "web"
+    (static / "sounds").mkdir(parents=True)
+    (static / "index.html").write_text("<html></html>")
+    for name in ("raise.mp3", "chips_1.wav", "README.md"):
+        (static / "sounds" / name).write_text("x")
+    app = create_app(Settings(db_path=str(tmp_path / "c.db"), static_dir=str(static), card_deck="artwork"))
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        cfg = (await client.get("/api/v1/public/config")).json()
+    assert cfg == {"card_deck": "artwork", "sounds": ["chips_1.wav", "raise.mp3"]}

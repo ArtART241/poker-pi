@@ -1,11 +1,22 @@
 <script>
-  import { SUIT, RANK } from "./format.js";
+  // One playing card. The face style comes from the viewer setting (Drawn / Artwork).
+  // To remove a style: delete its component/files and its entry in settings.svelte.js DECKS.
+  import DrawnCard from "./cards/DrawnCard.svelte";
+  import { deck } from "./settings.svelte.js";
+  import { rankLabel } from "./cards/suits.js";
+
   let { card = null, size = "md", dim = false } = $props();
+
+  const artworkSrc = (c) => `/cards/artwork/${rankLabel(c[0])}${c[1].toUpperCase()}.svg`;
 </script>
 
 {#if card}
-  <span class="card {size} suit-{card[1]}" class:dim title={card}>
-    <span class="rank">{RANK[card[0]] ?? card[0]}</span><span class="suit">{SUIT[card[1]]}</span>
+  <span class="card {size}" class:dim title={card}>
+    {#if deck() === "artwork"}
+      <img src={artworkSrc(card)} alt={card} draggable="false" />
+    {:else}
+      <DrawnCard {card} />
+    {/if}
   </span>
 {:else}
   <span class="card back {size}" aria-label="hidden card"></span>
@@ -13,34 +24,43 @@
 
 <style>
   .card {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: #fdfdf8;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
-    font-weight: 700;
-    line-height: 1;
+    display: inline-block;
+    position: relative;
+    aspect-ratio: 5 / 7;
+    border-radius: 7%/5%;
+    background: #fffdf6;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.45);
+    overflow: hidden;
     user-select: none;
-    transition: transform 0.25s, opacity 0.25s;
-    animation: deal 0.25s ease-out;
+    transform-origin: 50% 100%;
+    animation: flip 0.35s ease-out;
+    transition: opacity 0.3s, filter 0.3s;
+    flex: none;
   }
-  .md { width: 2.4rem; height: 3.3rem; font-size: 1.05rem; }
-  .lg { width: 3.1rem; height: 4.3rem; font-size: 1.35rem; }
-  .sm { width: 1.6rem; height: 2.2rem; font-size: 0.75rem; border-radius: 4px; }
-  .suit { font-size: 1.1em; margin-top: 0.1em; }
-  .suit-s { color: #1b1b1f; }
-  .suit-h { color: #d22b2b; }
-  .suit-d { color: #1f5fd1; }
-  .suit-c { color: #13824b; }
-  .dim { opacity: 0.45; }
+  .md { width: 2.6rem; }
+  .lg { width: 3.4rem; }
+  .sm { width: 1.7rem; }
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+  }
+  .dim { opacity: 0.55; filter: grayscale(0.6); }
   .back {
     background:
-      repeating-linear-gradient(45deg, #8c1c2b 0 4px, #a8283a 4px 8px);
-    border: 2px solid #fdfdf8;
+      radial-gradient(circle at 50% 50%, transparent 0 28%, rgb(255 255 255 / 0.18) 29% 31%, transparent 32%),
+      repeating-linear-gradient(45deg, rgb(255 255 255 / 0.14) 0 2px, transparent 2px 9px),
+      repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.14) 0 2px, transparent 2px 9px),
+      #9b1c2c;
+    border: 3px solid #fffdf6;
+    animation: deal 0.3s ease-out;
+  }
+  @keyframes flip {
+    from { transform: perspective(400px) rotateY(85deg); filter: brightness(0.7); }
+    to { transform: perspective(400px) rotateY(0deg); }
   }
   @keyframes deal {
-    from { transform: translateY(-6px) scale(0.9); opacity: 0; }
+    from { transform: translateY(-14px) scale(0.85); opacity: 0; }
   }
 </style>

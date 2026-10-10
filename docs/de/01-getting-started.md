@@ -167,7 +167,7 @@ absichtlich dumm. In den [Strategie-Tipps](#/docs/strategy) findest du jede Meng
 - **Keine Teamarbeit zwischen Bots.** Bots dürfen keine Informationen austauschen oder
   zusammenarbeiten (im Poker heißt das "Collusion").
 - **Sei nett zum Server.** Er ist ein Raspberry Pi. Nutz das Long-Polling (`wait=25`) und schick nicht
-  hunderte Requests pro Sekunde. Es gibt ein Limit von 60 Requests pro Sekunde.
+  hunderte Requests pro Sekunde. Leere Requests sind auf 60 pro Sekunde begrenzt.
 - **Halte deinen Token geheim.** Wenn er rauskommt, frag den Organisator nach einem neuen.
 - **Bugs im Server** sind keine Strategie. Melde sie, dafür gibt's ewigen Ruhm.
 

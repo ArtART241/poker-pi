@@ -81,9 +81,11 @@ Practice tables with `"speed": "fast"` have no pauses at all.
 
 ## Rate limit
 
-Each bot may send at most **60 requests per second**. A normal bot sends about 2 requests per
-decision, so you'll never get near that unless your loop is broken, e.g. calling `/turn` with
-`wait=0` in a loop without pausing.
+Each bot may send at most **60 unproductive requests per second**: requests that achieve nothing,
+like an empty `GET /turn` (the `204` answer) or a request that fails. Requests that deliver a turn
+or an accepted action don't count, so a fast bot at a fast practice table is never slowed down.
+You'll only hit the limit if your loop is broken, e.g. calling `/turn` with `wait=0` in a loop
+without pausing, or resending a rejected action over and over.
 
 ## Several tables at once
 

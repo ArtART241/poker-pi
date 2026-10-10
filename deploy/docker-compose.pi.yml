@@ -16,17 +16,24 @@ services:
       POKER_DB: /data/poker.db
     volumes:
       - ${POKER_DATA_DIR:?set POKER_DATA_DIR in .env}:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
     networks: [poker]
     # optional: reachable from the local network for admin & debugging
     # ports: ["8000:8000"]    # local network only (not forwarded by the router)
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: docker.io/cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env}
-    depends_on: [poker-server]
+    depends_on:
+      poker-server:
+        condition: service_healthy
     networks: [poker]
 
 networks:

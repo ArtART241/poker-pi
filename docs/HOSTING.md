@@ -22,6 +22,26 @@ npm run build                           # builds web/dist, which the server then
 
 The database defaults to `data/poker.db` in the repository root.
 
+## Running in a container (Docker or Podman)
+
+```bash
+docker compose up -d --build        # or: podman compose up -d --build
+docker compose exec poker-server python -m poker_pi.admin create-bot "MyBot" --owner Me
+docker compose logs -f poker-server
+docker compose down                 # data stays in the "poker-data" volume (down -v deletes it)
+```
+
+The website is on http://localhost:8000 (`POKER_PORT=8080 docker compose up -d` for another port).
+Bots running on the same machine use `POKER_URL=http://localhost:8000`.
+
+Podman notes:
+- `podman compose` hands off to docker-compose if it's installed, so the commands are the same.
+- Building directly with `podman build` creates an OCI image, which drops the Dockerfile's
+  `HEALTHCHECK`. That's why the compose files declare the healthcheck themselves. If you build by
+  hand, use `podman build --format docker -t poker-pi .`.
+- The image is multi-arch-friendly: build it on the machine that runs it (arm64 on the Pi and
+  Apple Silicon, amd64 elsewhere).
+
 ## Admin CLI
 
 All admin work goes through `python -m poker_pi.admin`. It writes to the database directly, and the
@@ -60,7 +80,7 @@ Environment variables (all optional):
 | `POKER_MAX_TIMEOUTS` | `3` | timeouts in a row until a bot sits out |
 | `POKER_SITOUT_GRACE` | `3` | seconds a sitting-out bot gets per decision |
 | `POKER_DISCONNECT_AFTER` | `60` | seconds without any request until a bot counts as disconnected |
-| `POKER_RATE_LIMIT` | `60` | requests per second per bot |
+| `POKER_RATE_LIMIT` | `60` | unproductive requests (empty polls, errors) per second per bot |
 | `POKER_CARD_DECK` | `drawn` | default card style on the website: `drawn` or `artwork` (viewers can switch in the ⚙ menu) |
 
 Per-tournament settings (stack, blind speed, pacing) are options of `create-tournament`.

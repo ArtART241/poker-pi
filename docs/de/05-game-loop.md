@@ -83,9 +83,12 @@ heißt nur, dass `GET /turn` manchmal etwas länger braucht.
 
 ## Rate-Limit
 
-Jeder Bot darf höchstens **60 Requests pro Sekunde** schicken. Ein normaler Bot schickt etwa 2 Requests
-pro Entscheidung, du kommst also nie in die Nähe, außer deine Schleife ist kaputt, z. B. wenn du
-`/turn` mit `wait=0` ohne Pause in einer Schleife aufrufst.
+Jeder Bot darf höchstens **60 unproduktive Requests pro Sekunde** schicken: Requests, die nichts
+bewirken, etwa ein leeres `GET /turn` (die `204`-Antwort) oder ein Request, der fehlschlägt.
+Requests, die einen Zug liefern oder eine angenommene Aktion bringen, zählen nicht. Ein schneller Bot
+an einem schnellen Übungstisch wird also nie ausgebremst. Ins Limit läufst du nur, wenn deine Schleife
+kaputt ist, z. B. wenn du `/turn` mit `wait=0` ohne Pause aufrufst oder eine abgelehnte Aktion immer
+wieder schickst.
 
 ## Mehrere Tische gleichzeitig
 

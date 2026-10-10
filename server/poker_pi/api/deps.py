@@ -43,9 +43,17 @@ async def current_bot(
     if len(window) >= hub.settings.rate_limit:
         raise HTTPException(
             429,
-            f"Too many requests (max {hub.settings.rate_limit} per second). "
+            f"Too many requests (max {hub.settings.rate_limit} unproductive requests per second). "
             "Use GET /turn with wait=25 instead of asking in a tight loop.",
         )
     window.append(now)
     hub.registry.seen(bot["id"])
     return bot
+
+
+def refund(bot_id: str) -> None:
+    """Productive requests (a turn delivered, an action accepted) don't count against the limit:
+    it exists to stop runaway loops, not fast bots."""
+    window = _requests.get(bot_id)
+    if window:
+        window.pop()

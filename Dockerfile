@@ -1,7 +1,7 @@
 # poker-pi: builds the spectator UI, then runs the Python server that also serves it.
 # Works on amd64 and arm64 (Raspberry Pi).
 
-FROM node:22-alpine AS web
+FROM docker.io/library/node:22-alpine AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -9,7 +9,7 @@ COPY web/ ./
 COPY docs/ /src/docs/
 RUN npm run build
 
-FROM python:3.13-slim
+FROM docker.io/library/python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     POKER_DB=/data/poker.db \

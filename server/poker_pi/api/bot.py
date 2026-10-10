@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from ..services import Hub
 from ..tables.turns import TurnError
 from . import models as M
-from .deps import current_bot, get_hub
+from .deps import current_bot, get_hub, refund
 from .views import tournament_info
 
 ERRORS = {
@@ -64,6 +64,7 @@ async def get_turn(
     turn = await hub.registry.wait_for_turn(bot["id"], wait, table_id)
     if turn is None:
         return Response(status_code=204)
+    refund(bot["id"])
     return turn.public_payload()
 
 
@@ -87,6 +88,7 @@ async def post_action(body: M.ActionRequest, bot: Bot = Depends(current_bot),
         action = hub.registry.submit(bot["id"], body.turn_id, body.action, body.amount)
     except TurnError as e:
         raise HTTPException(e.status, e.detail) from None
+    refund(bot["id"])
     return {"accepted": True, "action": action.kind, "amount": action.amount}
 
 

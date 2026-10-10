@@ -45,8 +45,9 @@ nächsten `GET /turn` weitermachen. Wenn das oft passiert, miss, wie lange `deci
 
 ## `429 Too Many Requests`
 
-Dein Bot schickt mehr als 60 Requests pro Sekunde. Höchstwahrscheinlich rufst du `/turn` mit `wait=0`
-in einer Schleife auf, oder du wiederholst nach einem Fehler ohne Pause. Nimm `wait=25` und schlafe
+Dein Bot schickt mehr als 60 Requests pro Sekunde, die nichts bewirken (leere Abfragen oder Fehler).
+Höchstwahrscheinlich rufst du `/turn` mit `wait=0` in einer Schleife auf, oder du wiederholst nach
+einem Fehler ohne Pause. Nimm `wait=25` und schlafe
 nach Fehlern 1 bis 2 s.
 
 ## `403` / `1020` / eine HTML-Seite statt JSON

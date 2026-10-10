@@ -165,7 +165,7 @@ It gets the full game state and returns an action. The starter strategy is delib
 - **No teamwork between bots.** Bots must not share information or work together (that's called
   "collusion" in poker).
 - **Be nice to the server.** It's a Raspberry Pi. Use the long-poll (`wait=25`) and don't send
-  hundreds of requests per second. There is a rate limit of 60 requests per second.
+  hundreds of requests per second. Empty requests are limited to 60 per second.
 - **Keep your token secret.** If it leaks, ask the organizer for a new one.
 - **Bugs in the server** are not a strategy. Report them, and you get eternal glory.
 

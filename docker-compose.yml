@@ -1,7 +1,11 @@
-# Local / generic setup. For the Raspberry Pi with a Cloudflare tunnel see deploy/.
+# Local / generic setup (Docker or Podman). For the Raspberry Pi with a Cloudflare tunnel see deploy/.
 #
-#   docker compose up -d --build
+#   docker compose up -d --build          (podman: podman compose up -d --build)
 #   docker compose exec poker-server python -m poker_pi.admin create-bot "MyBot" --owner Me
+#   open http://localhost:8000
+#
+# Data lives in the named volume "poker-data". To keep it in a folder instead, replace
+# "poker-data:/data" with e.g. "./data:/data".
 services:
   poker-server:
     build: .
@@ -9,7 +13,16 @@ services:
     restart: unless-stopped
     environment:
       POKER_DB: /data/poker.db
+      # POKER_CARD_DECK: artwork      # default card style: drawn | artwork
     volumes:
-      - ${POKER_DATA_DIR:-./data}:/data
+      - poker-data:/data
     ports:
       - "${POKER_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+
+volumes:
+  poker-data: {}

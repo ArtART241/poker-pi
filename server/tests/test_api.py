@@ -359,3 +359,31 @@ async def test_web_config_lists_sounds(tmp_path):
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         cfg = (await client.get("/api/v1/public/config")).json()
     assert cfg == {"card_deck": "artwork", "sounds": ["chips_1.wav", "raise.mp3"]}
+
+
+async def test_rate_limit_counts_only_unproductive_requests(tmp_path):
+    settings = Settings(db_path=str(tmp_path / "rl.db"), static_dir=str(tmp_path / "none"), rate_limit=10)
+    app = create_app(settings)
+    hub = app.state.hub
+    await hub.start()
+    tokens = make_bots(hub, "fast", "spammer")
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            # a fast bot at a practice table: many more than 10 productive requests per second
+            r = await client.post("/api/v1/bot/practice", json={"opponents": ["station"]}, headers=auth(tokens["fast"]))
+            assert r.status_code == 200
+            statuses = []
+            for _ in range(15):
+                r = await client.get("/api/v1/bot/turn", params={"wait": 2}, headers=auth(tokens["fast"]))
+                statuses.append(r.status_code)
+                if r.status_code == 200:
+                    a = await client.post("/api/v1/bot/action", json={"turn_id": r.json()["turn_id"], "action": "call"},
+                                          headers=auth(tokens["fast"]))
+                    statuses.append(a.status_code)
+            assert 429 not in statuses and statuses.count(200) >= 20
+            # a runaway loop of empty polls is stopped
+            codes = [(await client.get("/api/v1/bot/turn", params={"wait": 0}, headers=auth(tokens["spammer"]))).status_code
+                     for _ in range(15)]
+            assert 429 in codes
+    finally:
+        await hub.stop()

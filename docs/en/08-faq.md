@@ -45,8 +45,8 @@ with the next `GET /turn`. If this happens often, measure how long `decide` take
 
 ## `429 Too Many Requests`
 
-Your bot sends more than 60 requests per second. Most likely you're calling `/turn` with `wait=0` in
-a loop, or you're retrying an error without pausing. Use `wait=25` and `sleep` 1 to 2 s after errors.
+Your bot sends more than 60 requests per second that achieve nothing (empty polls or errors).
+Most likely you're calling `/turn` with `wait=0` in a loop, or you're retrying an error without pausing. Use `wait=25` and `sleep` 1 to 2 s after errors.
 
 ## `403` / `1020` / an HTML page instead of JSON
 

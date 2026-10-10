@@ -117,4 +117,6 @@ def run() -> None:
         port=int(os.environ.get("POKER_PORT", "8000")),
         proxy_headers=True,
         forwarded_allow_ips="*",
+        # bots keep long-polls open for up to 30 s; don't let them block a restart
+        timeout_graceful_shutdown=3,
     )

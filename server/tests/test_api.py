@@ -387,3 +387,27 @@ async def test_rate_limit_counts_only_unproductive_requests(tmp_path):
             assert 429 in codes
     finally:
         await hub.stop()
+
+
+async def test_validation_errors_use_the_common_error_shape(env):
+    _, hub, client = env
+    tokens = make_bots(hub, "v")
+    r = await client.post("/api/v1/bot/action", json={"action": "call"}, headers=auth(tokens["v"]))
+    assert r.status_code == 422
+    assert isinstance(r.json()["detail"], str) and "turn_id" in r.json()["detail"]
+    r = await client.get("/api/v1/bot/turn", params={"wait": 99}, headers=auth(tokens["v"]))
+    assert r.status_code == 422 and "wait" in r.json()["detail"]
+    spec = (await client.get("/openapi.json")).json()
+    assert "HTTPValidationError" not in spec["components"]["schemas"]
+
+
+async def test_events_only_carry_their_own_fields(env):
+    _, hub, client = env
+    tokens = make_bots(hub, "e")
+    await client.post("/api/v1/bot/practice", json={"opponents": ["station"]}, headers=auth(tokens["e"]))
+    r = await client.get("/api/v1/bot/turn", params={"wait": 5}, headers=auth(tokens["e"]))
+    state = r.json()
+    assert state["tournament_id"] is None  # nullable fields stay present
+    start = next(e for e in state["action_log"] if e["type"] == "hand_start")
+    assert "winners" not in start and "status" not in start  # but unused event fields are left out
+    assert set(start["players"][0]) == {"seat", "name", "player_id", "stack"}

@@ -10,7 +10,17 @@ Authorization: Bearer <token>
 
 Eine interaktive Fassung dieser Seite, in der sich jeder Request ausprobieren lässt, ist die
 [Swagger UI](https://poker.example.com/docs). Die maschinenlesbare Spezifikation liegt unter
-[/openapi.yaml](https://poker.example.com/openapi.yaml).
+[/openapi.yaml](https://poker.example.com/openapi.yaml) (OpenAPI 3.1).
+
+<details>
+<summary>Einen Client aus der Spezifikation erzeugen</summary>
+
+Die Spezifikation eignet sich für Client-Generatoren wie OpenAPI Generator; getestet wurde sie mit
+den Generatoren `dart` und `dart-dio`. Jede Antwort ist ein benannter Typ, und alle Felder, die `null`
+sein können, sind als optional deklariert. Solche Felder sind im JSON dennoch immer vorhanden (mit dem
+Wert `null`), mit einer Ausnahme: Events in `action_log` / `events` enthalten nur die Felder, die zu
+ihrem `type` gehören.
+</details>
 
 ## Übersicht
 
@@ -143,13 +153,14 @@ Zusätzlich akzeptiert der Server:
 **Exakt denselben** Request zweimal zu senden (etwa als Wiederholung nach einem Netzwerkfehler)
 ist unbedenklich und liefert erneut `200`.
 
-> **Validierungsfehler:** Ist der Body fehlerhaft (kein JSON, `turn_id` fehlt, `amount` keine Zahl),
-> lautet die Antwort `422` mit `detail` als **Liste**, die das Problem beschreibt, z. B.
-> `{"detail": [{"type": "missing", "loc": ["body", "turn_id"], "msg": "Field required"}]}`.
+> **Fehlerhafte Requests** (Body kein JSON, `turn_id` fehlt, `amount` keine Zahl, ein Query-Parameter
+> außerhalb des Bereichs) werden ebenfalls mit `422` und einem einfachen `detail`-String beantwortet,
+> z. B. `{"detail": "Invalid request: body.turn_id: Field required"}`.
 
 ## Events im `action_log`
 
-Jeder Eintrag hat einen `type`. Platzbezogene Events enthalten außerdem `seat` und `name`.
+Jeder Eintrag hat einen `type`. Platzbezogene Events enthalten außerdem `seat` und `name`. Felder,
+die ein Typ nicht verwendet, entfallen.
 
 | `type` | Felder | Bedeutung |
 |---|---|---|

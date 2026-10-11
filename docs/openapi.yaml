@@ -100,11 +100,11 @@ paths:
         '204':
           description: Not your turn within `wait` seconds. Just ask again.
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: &id001
+                $ref: '#/components/schemas/Error'
   /api/v1/bot/action:
     post:
       tags:
@@ -157,8 +157,7 @@ paths:
           description: The action is not legal right now (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+              schema: *id001
       security:
       - HTTPBearer: []
   /api/v1/bot/tournaments:
@@ -238,11 +237,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
     delete:
       tags:
       - Bot API
@@ -289,11 +287,10 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Conflict
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
   /api/v1/bot/practice:
     get:
       tags:
@@ -370,11 +367,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
       security:
       - HTTPBearer: []
     delete:
@@ -476,11 +472,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
   /api/v1/bot/hands/{hand_id}:
     get:
       tags:
@@ -524,11 +519,10 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Not Found
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
   /api/v1/public/tournaments:
     get:
       tags:
@@ -564,9 +558,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Tournament Api V1 Public Tournaments  Tournament Id  Get
+                $ref: '#/components/schemas/TournamentDetail'
         '404':
           content:
             application/json:
@@ -574,11 +566,10 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Not Found
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
   /api/v1/public/tables:
     get:
       tags:
@@ -592,8 +583,7 @@ paths:
             application/json:
               schema:
                 items:
-                  additionalProperties: true
-                  type: object
+                  $ref: '#/components/schemas/TableSummary'
                 type: array
                 title: Response Tables Api V1 Public Tables Get
   /api/v1/public/tables/{table_id}:
@@ -615,9 +605,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Table Api V1 Public Tables  Table Id  Get
+                $ref: '#/components/schemas/TableSnapshot'
         '404':
           content:
             application/json:
@@ -625,11 +613,10 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Not Found
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
   /api/v1/public/tables/{table_id}/stream:
     get:
       tags:
@@ -664,11 +651,10 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Not Found
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
   /api/v1/public/hands:
     get:
       tags:
@@ -732,11 +718,10 @@ paths:
                   $ref: '#/components/schemas/HandSummary'
                 title: Response Hands Api V1 Public Hands Get
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
   /api/v1/public/hands/{hand_id}:
     get:
       tags:
@@ -764,11 +749,10 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Not Found
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
   /api/v1/public/leaderboard:
     get:
       tags:
@@ -782,8 +766,7 @@ paths:
             application/json:
               schema:
                 items:
-                  additionalProperties: true
-                  type: object
+                  $ref: '#/components/schemas/LeaderboardRow'
                 type: array
                 title: Response Leaderboard Api V1 Public Leaderboard Get
   /api/v1/public/bots:
@@ -799,8 +782,7 @@ paths:
             application/json:
               schema:
                 items:
-                  additionalProperties: true
-                  type: object
+                  $ref: '#/components/schemas/BotInfo'
                 type: array
                 title: Response Bots Api V1 Public Bots Get
   /api/v1/public/bots/{name}:
@@ -822,9 +804,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Bot Profile Api V1 Public Bots  Name  Get
+                $ref: '#/components/schemas/BotProfile'
         '404':
           content:
             application/json:
@@ -832,11 +812,10 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Not Found
         '422':
-          description: Validation Error
+          description: The request is malformed (detail says why).
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              schema: *id001
 components:
   schemas:
     ActionRequest:
@@ -844,7 +823,7 @@ components:
         turn_id:
           type: string
           title: Turn Id
-          description: The turn_id you received from GET /turn.
+          description: The turn_id from GET /turn.
         action:
           type: string
           title: Action
@@ -909,6 +888,144 @@ components:
       - level
       - hands_until_next_level
       title: BlindsInfo
+    BotInfo:
+      properties:
+        name:
+          type: string
+          title: Name
+        owner:
+          type: string
+          title: Owner
+        created_at:
+          type: string
+          title: Created At
+        connected:
+          type: boolean
+          title: Connected
+      type: object
+      required:
+      - name
+      - owner
+      - created_at
+      - connected
+      title: BotInfo
+    BotProfile:
+      properties:
+        name:
+          type: string
+          title: Name
+        owner:
+          type: string
+          title: Owner
+        created_at:
+          type: string
+          title: Created At
+        connected:
+          type: boolean
+          title: Connected
+        tables:
+          items:
+            $ref: '#/components/schemas/BotTable'
+          type: array
+          title: Tables
+        stats:
+          $ref: '#/components/schemas/BotStats'
+      type: object
+      required:
+      - name
+      - owner
+      - created_at
+      - connected
+      - tables
+      - stats
+      title: BotProfile
+    BotStats:
+      properties:
+        hands:
+          type: integer
+          title: Hands
+          description: Tournament hands played.
+        hands_won:
+          type: integer
+          title: Hands Won
+        net_chips:
+          type: integer
+          title: Net Chips
+        practice_hands:
+          type: integer
+          title: Practice Hands
+        tournaments:
+          items:
+            $ref: '#/components/schemas/BotTournamentResult'
+          type: array
+          title: Tournaments
+        points:
+          type: integer
+          title: Points
+        wins:
+          type: integer
+          title: Wins
+      type: object
+      required:
+      - hands
+      - hands_won
+      - net_chips
+      - practice_hands
+      - tournaments
+      - points
+      - wins
+      title: BotStats
+    BotTable:
+      properties:
+        table_id:
+          type: string
+          title: Table Id
+        kind:
+          type: string
+          enum:
+          - tournament
+          - practice
+          title: Kind
+        title:
+          type: string
+          title: Title
+      type: object
+      required:
+      - table_id
+      - kind
+      - title
+      title: BotTable
+    BotTournamentResult:
+      properties:
+        tournament_id:
+          type: integer
+          title: Tournament Id
+        tournament:
+          type: string
+          title: Tournament
+          description: Tournament name.
+        finished_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Finished At
+        place:
+          type: integer
+          title: Place
+        points:
+          type: integer
+          title: Points
+        players:
+          type: integer
+          title: Players
+      type: object
+      required:
+      - tournament_id
+      - tournament
+      - place
+      - points
+      - players
+      title: BotTournamentResult
     Error:
       properties:
         detail:
@@ -919,15 +1036,187 @@ components:
       required:
       - detail
       title: Error
-    HTTPValidationError:
+    Event:
       properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          type: array
-          title: Detail
+        type:
+          type: string
+          title: Type
+          description: hand_start, post, deal_hole, action, street, uncalled, showdown,
+            win, hand_end or player_status.
+        seat:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Seat
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        hand_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Hand Id
+        hand_no:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Hand No
+        level:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Level
+        button:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Button
+        small_blind:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Small Blind
+        big_blind:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Big Blind
+        ante:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Ante
+        players:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/EventPlayer'
+            type: array
+          - type: 'null'
+          title: Players
+        blind:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Blind
+          description: 'post: small, big or ante.'
+        street:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Street
+        action:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Action
+          description: 'action: fold, check, call or raise.'
+        amount:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Amount
+          description: 'action: chips added (call) or new total bet (raise); post/uncalled/win:
+            chips.'
+        bet:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Bet
+        stack:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Stack
+        all_in:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: All In
+        pot:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Pot
+          description: 'action/street: chips in the middle; win: pot index (0 = main
+            pot).'
+        cards:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Cards
+        board:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Board
+        hands:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ShownHand'
+            type: array
+          - type: 'null'
+          title: Hands
+        winners:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/PotWinner'
+            type: array
+          - type: 'null'
+          title: Winners
+        hand:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Hand
+          description: 'win: name of the winning hand, null without showdown.'
+        results:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/HandResult'
+            type: array
+          - type: 'null'
+          title: Results
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+          description: 'player_status: timeout, sitting_out, disconnected, connected
+            or back.'
+      additionalProperties: true
       type: object
-      title: HTTPValidationError
+      required:
+      - type
+      title: Event
+      description: One thing that happened in a hand. `type` says which of the optional
+        fields are present.
+    EventPlayer:
+      properties:
+        seat:
+          type: integer
+          title: Seat
+        name:
+          type: string
+          title: Name
+        player_id:
+          type: string
+          title: Player Id
+        stack:
+          type: integer
+          title: Stack
+      type: object
+      required:
+      - seat
+      - name
+      - player_id
+      - stack
+      title: EventPlayer
     HandDetail:
       properties:
         id:
@@ -957,8 +1246,7 @@ components:
           title: Ended At
         events:
           items:
-            additionalProperties: true
-            type: object
+            $ref: '#/components/schemas/Event'
           type: array
           title: Events
           description: Complete history including everybody's hole cards.
@@ -966,13 +1254,46 @@ components:
       required:
       - id
       - table_id
-      - tournament_id
       - practice
       - hand_no
       - started_at
-      - ended_at
       - events
       title: HandDetail
+    HandResult:
+      properties:
+        seat:
+          type: integer
+          title: Seat
+        name:
+          type: string
+          title: Name
+        player_id:
+          type: string
+          title: Player Id
+        start_stack:
+          type: integer
+          title: Start Stack
+        stack:
+          type: integer
+          title: Stack
+        net:
+          type: integer
+          title: Net
+        cards:
+          items:
+            type: string
+          type: array
+          title: Cards
+      type: object
+      required:
+      - seat
+      - name
+      - player_id
+      - start_stack
+      - stack
+      - net
+      - cards
+      title: HandResult
     HandSummary:
       properties:
         id:
@@ -1037,19 +1358,54 @@ components:
       required:
       - id
       - table_id
-      - tournament_id
       - practice
       - hand_no
       - started_at
-      - ended_at
-      - blinds
       - players
       - pot
       - winners
-      - winning_hand
       - board
       - showdown
       title: HandSummary
+    LeaderboardRow:
+      properties:
+        name:
+          type: string
+          title: Name
+        owner:
+          type: string
+          title: Owner
+        points:
+          type: integer
+          title: Points
+        tournaments:
+          type: integer
+          title: Tournaments
+        wins:
+          type: integer
+          title: Wins
+        avg_place:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Avg Place
+        best_place:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Best Place
+        hands:
+          type: integer
+          title: Hands
+      type: object
+      required:
+      - name
+      - owner
+      - points
+      - tournaments
+      - wins
+      - hands
+      title: LeaderboardRow
     Legal:
       properties:
         fold:
@@ -1059,14 +1415,13 @@ components:
         check:
           type: boolean
           title: Check
-          description: True if nothing is owed, so you may check.
+          description: True if nothing is owed, so checking is allowed.
         call:
           anyOf:
           - type: integer
           - type: 'null'
           title: Call
-          description: Chips that calling ADDS to your bet, or null if there is nothing
-            to call.
+          description: Chips a call would add, or null if there is nothing to call.
         raise:
           anyOf:
           - $ref: '#/components/schemas/RaiseRange'
@@ -1077,8 +1432,6 @@ components:
       required:
       - fold
       - check
-      - call
-      - raise
       title: Legal
     MeResponse:
       properties:
@@ -1096,20 +1449,18 @@ components:
             $ref: '#/components/schemas/TableRef'
           type: array
           title: Tables
-          description: Tables you are currently seated at.
+          description: Tables the bot is currently seated at.
         open_turns:
           type: integer
           title: Open Turns
-          description: Turns waiting for your answer right now.
+          description: Turns waiting for an answer right now.
         registered_tournaments:
           items:
             type: integer
           type: array
           title: Registered Tournaments
         stats:
-          additionalProperties: true
-          type: object
-          title: Stats
+          $ref: '#/components/schemas/BotStats'
       type: object
       required:
       - id
@@ -1120,6 +1471,30 @@ components:
       - registered_tournaments
       - stats
       title: MeResponse
+    Opponent:
+      type: string
+      enum:
+      - random
+      - station
+      - tight
+      title: Opponent
+    PacingInfo:
+      properties:
+        action:
+          type: number
+          title: Action
+        street:
+          type: number
+          title: Street
+        hand_end:
+          type: number
+          title: Hand End
+      type: object
+      required:
+      - action
+      - street
+      - hand_end
+      title: PacingInfo
     PlayerView:
       properties:
         seat:
@@ -1160,36 +1535,49 @@ components:
       - status
       - is_you
       title: PlayerView
+    PotWinner:
+      properties:
+        seat:
+          type: integer
+          title: Seat
+        name:
+          type: string
+          title: Name
+        amount:
+          type: integer
+          title: Amount
+      type: object
+      required:
+      - seat
+      - name
+      - amount
+      title: PotWinner
     PracticeRequest:
       properties:
         opponents:
-          items:
-            type: string
-            enum:
-            - random
-            - station
-            - tight
-          type: array
-          maxItems: 8
-          minItems: 1
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Opponent'
+            type: array
+            maxItems: 8
+            minItems: 1
+          - type: 'null'
           title: Opponents
           description: 'House bots to play against: random, station (calls everything),
-            tight (only plays good hands).'
+            tight (only plays good hands). Default: one of each.'
         speed:
-          type: string
-          enum:
-          - fast
-          - live
-          title: Speed
-          description: 'fast: no pauses. live: same pace as tournaments, nice to watch
-            in the browser.'
-          default: fast
+          anyOf:
+          - $ref: '#/components/schemas/PracticeSpeed'
+          - type: 'null'
+          description: 'fast (default): no pauses. live: same pace as tournaments.'
         starting_stack:
-          type: integer
-          maximum: 100000.0
-          minimum: 100.0
+          anyOf:
+          - type: integer
+            maximum: 100000.0
+            minimum: 100.0
+          - type: 'null'
           title: Starting Stack
-          default: 1500
+          description: Default 1500.
       type: object
       title: PracticeRequest
       examples:
@@ -1216,8 +1604,7 @@ components:
           title: Hand No
         players:
           items:
-            additionalProperties: true
-            type: object
+            $ref: '#/components/schemas/SeatInfo'
           type: array
           title: Players
         watch_url:
@@ -1227,21 +1614,26 @@ components:
       required:
       - table_id
       - status
-      - finish_reason
       - hand_no
       - players
       - watch_url
       title: PracticeResponse
+    PracticeSpeed:
+      type: string
+      enum:
+      - fast
+      - live
+      title: PracticeSpeed
     RaiseRange:
       properties:
         min:
           type: integer
           title: Min
-          description: Smallest total bet you may raise TO.
+          description: Smallest total bet to raise TO.
         max:
           type: integer
           title: Max
-          description: Largest total bet you may raise TO (= all-in).
+          description: Largest total bet to raise TO (= all-in).
       type: object
       required:
       - min
@@ -1260,6 +1652,96 @@ components:
       - tournament_id
       - registered
       title: RegistrationResponse
+    ResultRow:
+      properties:
+        place:
+          type: integer
+          title: Place
+        points:
+          type: integer
+          title: Points
+        name:
+          type: string
+          title: Name
+        owner:
+          type: string
+          title: Owner
+        bot_id:
+          type: string
+          title: Bot Id
+      type: object
+      required:
+      - place
+      - points
+      - name
+      - owner
+      - bot_id
+      title: ResultRow
+    SeatInfo:
+      properties:
+        seat:
+          type: integer
+          title: Seat
+        name:
+          type: string
+          title: Name
+        stack:
+          type: integer
+          title: Stack
+        status:
+          type: string
+          title: Status
+          description: active, sitting_out, disconnected or busted.
+        house:
+          type: boolean
+          title: House
+          description: True for built-in practice opponents.
+      type: object
+      required:
+      - seat
+      - name
+      - stack
+      - status
+      - house
+      title: SeatInfo
+    ShownHand:
+      properties:
+        seat:
+          type: integer
+          title: Seat
+        name:
+          type: string
+          title: Name
+        cards:
+          items:
+            type: string
+          type: array
+          title: Cards
+      type: object
+      required:
+      - seat
+      - name
+      - cards
+      title: ShownHand
+    Standing:
+      properties:
+        name:
+          type: string
+          title: Name
+        stack:
+          type: integer
+          title: Stack
+        place:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Place
+          description: null while the bot is still in play.
+      type: object
+      required:
+      - name
+      - stack
+      title: Standing
     TableRef:
       properties:
         table_id:
@@ -1288,6 +1770,250 @@ components:
       - stack
       - status
       title: TableRef
+    TableSnapshot:
+      properties:
+        id:
+          type: string
+          title: Id
+        kind:
+          type: string
+          enum:
+          - tournament
+          - practice
+          title: Kind
+        title:
+          type: string
+          title: Title
+        tournament_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tournament Id
+        status:
+          type: string
+          title: Status
+          description: waiting, running or finished.
+        finish_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Finish Reason
+        hand_no:
+          type: integer
+          title: Hand No
+        hand_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Hand Id
+        blinds:
+          anyOf:
+          - $ref: '#/components/schemas/BlindsInfo'
+          - type: 'null'
+        button:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Button
+        seats:
+          items:
+            $ref: '#/components/schemas/SeatInfo'
+          type: array
+          title: Seats
+        events:
+          items:
+            $ref: '#/components/schemas/Event'
+          type: array
+          title: Events
+          description: Public events of the current (or last) hand; no hidden cards.
+        waiting_on:
+          anyOf:
+          - $ref: '#/components/schemas/WaitingOn'
+          - type: 'null'
+        pacing:
+          $ref: '#/components/schemas/PacingInfo'
+        spectators:
+          type: integer
+          title: Spectators
+      type: object
+      required:
+      - id
+      - kind
+      - title
+      - status
+      - hand_no
+      - seats
+      - events
+      - pacing
+      - spectators
+      title: TableSnapshot
+    TableSummary:
+      properties:
+        id:
+          type: string
+          title: Id
+        kind:
+          type: string
+          enum:
+          - tournament
+          - practice
+          title: Kind
+        title:
+          type: string
+          title: Title
+        tournament_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tournament Id
+        status:
+          type: string
+          title: Status
+          description: waiting, running or finished.
+        hand_no:
+          type: integer
+          title: Hand No
+        players:
+          items:
+            type: string
+          type: array
+          title: Players
+        blinds:
+          anyOf:
+          - $ref: '#/components/schemas/BlindsInfo'
+          - type: 'null'
+      type: object
+      required:
+      - id
+      - kind
+      - title
+      - status
+      - hand_no
+      - players
+      title: TableSummary
+    TournamentConfig:
+      properties:
+        starting_stack:
+          type: integer
+          title: Starting Stack
+        hands_per_level:
+          type: integer
+          title: Hands Per Level
+        levels:
+          items:
+            items:
+              type: integer
+            type: array
+          type: array
+          title: Levels
+          description: Blind levels as [small, big, ante].
+        pacing:
+          $ref: '#/components/schemas/PacingInfo'
+        max_players:
+          type: integer
+          title: Max Players
+      type: object
+      required:
+      - starting_stack
+      - hands_per_level
+      - levels
+      - pacing
+      - max_players
+      title: TournamentConfig
+    TournamentDetail:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        status:
+          type: string
+          enum:
+          - registering
+          - running
+          - finished
+          - cancelled
+          title: Status
+        start_at:
+          type: string
+          title: Start At
+        started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Started At
+        finished_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Finished At
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+        table_id:
+          type: string
+          title: Table Id
+        players:
+          items:
+            type: string
+          type: array
+          title: Players
+          description: Registered bots (or the field, once started).
+        max_players:
+          type: integer
+          title: Max Players
+        starting_stack:
+          type: integer
+          title: Starting Stack
+        hands_per_level:
+          type: integer
+          title: Hands Per Level
+        registered:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Registered
+          description: Whether the requesting bot is registered (bot API only).
+        winner:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Winner
+        config:
+          $ref: '#/components/schemas/TournamentConfig'
+        results:
+          items:
+            $ref: '#/components/schemas/ResultRow'
+          type: array
+          title: Results
+        standings:
+          items:
+            $ref: '#/components/schemas/Standing'
+          type: array
+          title: Standings
+        live:
+          type: boolean
+          title: Live
+      type: object
+      required:
+      - id
+      - name
+      - status
+      - start_at
+      - table_id
+      - players
+      - max_players
+      - starting_stack
+      - hands_per_level
+      - config
+      - results
+      - standings
+      - live
+      title: TournamentDetail
     TournamentInfo:
       properties:
         id:
@@ -1345,7 +2071,7 @@ components:
           - type: boolean
           - type: 'null'
           title: Registered
-          description: Whether YOUR bot is registered (bot API only).
+          description: Whether the requesting bot is registered (bot API only).
         winner:
           anyOf:
           - type: string
@@ -1357,9 +2083,6 @@ components:
       - name
       - status
       - start_at
-      - started_at
-      - finished_at
-      - note
       - table_id
       - players
       - max_players
@@ -1371,11 +2094,11 @@ components:
         turn_id:
           type: string
           title: Turn Id
-          description: Send this back with your action.
+          description: Identifies this decision; send it back with the action.
         deadline_ms:
           type: integer
           title: Deadline Ms
-          description: Milliseconds left to answer before you are auto-checked/folded.
+          description: Milliseconds left before the server checks/folds automatically.
         table_id:
           type: string
           title: Table Id
@@ -1384,6 +2107,7 @@ components:
           - type: integer
           - type: 'null'
           title: Tournament Id
+          description: null at practice tables.
         practice:
           type: boolean
           title: Practice
@@ -1397,7 +2121,7 @@ components:
         seat:
           type: integer
           title: Seat
-          description: Your seat (0-8).
+          description: The bot's seat (0-8).
         name:
           type: string
           title: Name
@@ -1406,15 +2130,15 @@ components:
             type: string
           type: array
           title: Hole Cards
-          description: Your two private cards, e.g. ["Ah", "Td"].
+          description: The two private cards, e.g. ["Ah", "Td"].
         stack:
           type: integer
           title: Stack
-          description: Your chips behind.
+          description: Chips behind.
         bet:
           type: integer
           title: Bet
-          description: What you already bet on this street.
+          description: Chips already bet on this street.
         street:
           type: string
           enum:
@@ -1440,7 +2164,7 @@ components:
         to_call:
           type: integer
           title: To Call
-          description: Chips needed to call (0 if you can check).
+          description: Chips needed to call (0 if checking is possible).
         legal:
           $ref: '#/components/schemas/Legal'
         blinds:
@@ -1456,8 +2180,7 @@ components:
           title: Players
         action_log:
           items:
-            additionalProperties: true
-            type: object
+            $ref: '#/components/schemas/Event'
           type: array
           title: Action Log
           description: Everything public that happened in this hand so far.
@@ -1466,7 +2189,6 @@ components:
       - turn_id
       - deadline_ms
       - table_id
-      - tournament_id
       - practice
       - hand_id
       - hand_no
@@ -1486,32 +2208,19 @@ components:
       - players
       - action_log
       title: TurnState
-    ValidationError:
+    WaitingOn:
       properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          type: array
-          title: Location
-        msg:
-          type: string
-          title: Message
-        type:
-          type: string
-          title: Error Type
-        input:
-          title: Input
-        ctx:
-          type: object
-          title: Context
+        seat:
+          type: integer
+          title: Seat
+        remaining_ms:
+          type: integer
+          title: Remaining Ms
       type: object
       required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
+      - seat
+      - remaining_ms
+      title: WaitingOn
   securitySchemes:
     HTTPBearer:
       type: http

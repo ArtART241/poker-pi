@@ -25,8 +25,8 @@ async def tournaments(hub: Hub = Depends(get_hub)) -> list[dict[str, Any]]:
     return [tournament_info(hub, t) for t in hub.store.list_tournaments(limit=100)]
 
 
-@router.get("/tournaments/{tournament_id}", summary="Tournament details, standings and results",
-            responses={404: {"model": M.Error}})
+@router.get("/tournaments/{tournament_id}", response_model=M.TournamentDetail,
+            summary="Tournament details, standings and results", responses={404: {"model": M.Error}})
 async def tournament(tournament_id: int, hub: Hub = Depends(get_hub)) -> dict[str, Any]:
     t = hub.store.get_tournament(tournament_id)
     if t is None:
@@ -34,15 +34,15 @@ async def tournament(tournament_id: int, hub: Hub = Depends(get_hub)) -> dict[st
     return tournament_detail(hub, t)
 
 
-@router.get("/tables", summary="Tables that are running (or finished recently)")
+@router.get("/tables", response_model=list[M.TableSummary], summary="Tables that are running (or finished recently)")
 async def tables(hub: Hub = Depends(get_hub)) -> list[dict[str, Any]]:
     order = {"running": 0, "waiting": 1, "finished": 2}
     return sorted((t.summary() for t in hub.tables.values()),
                   key=lambda t: (order.get(t["status"], 3), t["kind"] != "tournament", t["id"]))
 
 
-@router.get("/tables/{table_id}", summary="Current state of a table (no hidden cards)",
-            responses={404: {"model": M.Error}})
+@router.get("/tables/{table_id}", response_model=M.TableSnapshot, response_model_exclude_unset=True,
+            summary="Current state of a table (no hidden cards)", responses={404: {"model": M.Error}})
 async def table(table_id: str, hub: Hub = Depends(get_hub)) -> dict[str, Any]:
     t = hub.tables.get(table_id)
     if t is None:
@@ -111,8 +111,8 @@ async def hands(
                                 before=before, limit=limit)
 
 
-@router.get("/hands/{hand_id}", response_model=M.HandDetail, summary="Full replay of a finished hand",
-            responses={404: {"model": M.Error}})
+@router.get("/hands/{hand_id}", response_model=M.HandDetail, response_model_exclude_unset=True,
+            summary="Full replay of a finished hand", responses={404: {"model": M.Error}})
 async def hand(hand_id: int, hub: Hub = Depends(get_hub)) -> dict[str, Any]:
     h = hub.store.get_hand(hand_id)
     if h is None:
@@ -120,7 +120,7 @@ async def hand(hand_id: int, hub: Hub = Depends(get_hub)) -> dict[str, Any]:
     return h
 
 
-@router.get("/leaderboard", summary="All-time tournament leaderboard")
+@router.get("/leaderboard", response_model=list[M.LeaderboardRow], summary="All-time tournament leaderboard")
 async def leaderboard(hub: Hub = Depends(get_hub)) -> list[dict[str, Any]]:
     rows = hub.store.leaderboard()
     for r in rows:
@@ -128,7 +128,7 @@ async def leaderboard(hub: Hub = Depends(get_hub)) -> list[dict[str, Any]]:
     return rows
 
 
-@router.get("/bots", summary="All registered bots")
+@router.get("/bots", response_model=list[M.BotInfo], summary="All registered bots")
 async def bots(hub: Hub = Depends(get_hub)) -> list[dict[str, Any]]:
     return [
         {"name": b["name"], "owner": b["owner"], "created_at": b["created_at"],
@@ -137,7 +137,8 @@ async def bots(hub: Hub = Depends(get_hub)) -> list[dict[str, Any]]:
     ]
 
 
-@router.get("/bots/{name}", summary="Profile and statistics of a bot", responses={404: {"model": M.Error}})
+@router.get("/bots/{name}", response_model=M.BotProfile, summary="Profile and statistics of a bot",
+            responses={404: {"model": M.Error}})
 async def bot_profile(name: str, hub: Hub = Depends(get_hub)) -> dict[str, Any]:
     b = hub.store.get_bot_by_name(name)
     if b is None or b["revoked"]:

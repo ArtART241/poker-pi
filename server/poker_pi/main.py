@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import AsyncIterator
 
 import yaml
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -73,6 +74,51 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(GZipMiddleware, minimum_size=1000)  # SSE streams are excluded automatically
     app.include_router(bot.router)
     app.include_router(public.router)
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+        """Malformed requests get the same {"detail": "..."} shape as every other error."""
+        problems = []
+        for err in exc.errors():
+            where = ".".join(str(part) for part in err.get("loc", ()))
+            problems.append(f"{where}: {err.get('msg', 'invalid')}" if where else str(err.get("msg")))
+        return JSONResponse(status_code=422, content={"detail": "Invalid request: " + "; ".join(problems)})
+
+    generate_openapi = app.openapi
+
+    def openapi() -> dict:
+        """The generated spec, with FastAPI's validation error schema replaced by our Error model
+        (its "string or integer" location field breaks several code generators)."""
+        if app.openapi_schema:
+            return app.openapi_schema
+        spec = generate_openapi()
+        error_ref = {"$ref": "#/components/schemas/Error"}
+        for operations in spec.get("paths", {}).values():
+            for operation in operations.values():
+                response = operation.get("responses", {}).get("422")
+                if response:
+                    response["content"] = {"application/json": {"schema": error_ref}}
+                    if response.get("description") == "Validation Error":
+                        response["description"] = "The request is malformed (detail says why)."
+        schemas = spec.get("components", {}).get("schemas", {})
+        schemas.pop("HTTPValidationError", None)
+        schemas.pop("ValidationError", None)
+        # Nullable fields are always sent, but some generators (e.g. Dart's) treat "required" as
+        # "never null" and reject the response. Listing them as optional keeps those clients working.
+        for schema in schemas.values():
+            required = schema.get("required")
+            if not required:
+                continue
+            props = schema.get("properties", {})
+            keep = [k for k in required
+                    if not any(alt.get("type") == "null" for alt in props.get(k, {}).get("anyOf", []))]
+            if keep:
+                schema["required"] = keep
+            else:
+                del schema["required"]
+        return spec
+
+    app.openapi = openapi  # type: ignore[method-assign]
 
     @app.get("/api/v1/health", include_in_schema=False)
     async def health() -> dict[str, str]:

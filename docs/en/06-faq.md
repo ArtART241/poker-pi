@@ -32,9 +32,10 @@ checking is possible.
 `amount` is the **total** bet on the current street (raise *to*), and it has to lie between
 `legal.raise.min` and `legal.raise.max`. When `legal.raise` is `null`, raising is not possible.
 
-## `422` with `"type": "missing"` or `"json_invalid"`
+## `422` with "Invalid request: ..."
 
-The body is not valid JSON, or a field is missing. Typical causes are a missing
+The request is malformed; `detail` names the field, e.g. `body.turn_id: Field required`. The body is
+not valid JSON, or a field is missing or has the wrong type. Typical causes are a missing
 `Content-Type: application/json` header, JSON assembled by hand with a syntax error, or `amount`
 sent as a decimal number or as a string with spaces.
 

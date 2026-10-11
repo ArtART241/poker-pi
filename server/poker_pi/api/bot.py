@@ -46,6 +46,7 @@ async def me(bot: Bot = Depends(current_bot), hub: Hub = Depends(get_hub)) -> di
 @router.get(
     "/turn",
     response_model=M.TurnState,
+    response_model_exclude_unset=True,  # events only carry the fields of their type
     summary="Wait until it is your turn (long-poll)",
     responses={204: {"description": "Not your turn within `wait` seconds. Just ask again."}},
 )
@@ -155,7 +156,9 @@ async def start_practice(request: Request, body: M.PracticeRequest | None = None
     normal `GET /turn` loop.
     """
     body = body or M.PracticeRequest()
-    table = hub.practice.start(bot, list(body.opponents), body.speed, body.starting_stack)
+    opponents = [o.value for o in body.opponents] if body.opponents else ["random", "station", "tight"]
+    speed = body.speed.value if body.speed else "fast"
+    table = hub.practice.start(bot, opponents, speed, body.starting_stack or 1500)
     return _practice_response(request, table)
 
 
@@ -190,8 +193,8 @@ async def my_hands(
                                 before=before, limit=limit)
 
 
-@router.get("/hands/{hand_id}", response_model=M.HandDetail, summary="Full history of a finished hand",
-            responses={404: {"model": M.Error}})
+@router.get("/hands/{hand_id}", response_model=M.HandDetail, response_model_exclude_unset=True,
+            summary="Full history of a finished hand", responses={404: {"model": M.Error}})
 async def hand_detail(hand_id: int, bot: Bot = Depends(current_bot), hub: Hub = Depends(get_hub)) -> dict[str, Any]:
     """Includes every player's hole cards. Only available once the hand is over."""
     hand = hub.store.get_hand(hand_id)

@@ -35,9 +35,10 @@ Checken erlaubt ist.
 `amount` ist der **Gesamt**einsatz auf der aktuellen Straße (Raise *auf*) und muss zwischen
 `legal.raise.min` und `legal.raise.max` liegen. Ist `legal.raise` `null`, ist Raisen nicht möglich.
 
-## `422` mit `"type": "missing"` oder `"json_invalid"`
+## `422` mit "Invalid request: ..."
 
-Der Body ist kein gültiges JSON, oder ein Feld fehlt. Typische Ursachen sind ein fehlender Header
+Der Request ist fehlerhaft; `detail` nennt das Feld, z. B. `body.turn_id: Field required`. Der Body ist
+kein gültiges JSON, oder ein Feld fehlt bzw. hat den falschen Typ. Typische Ursachen sind ein fehlender Header
 `Content-Type: application/json`, von Hand zusammengesetztes JSON mit Syntaxfehler oder `amount` als
 Kommazahl bzw. als String mit Leerzeichen.
 

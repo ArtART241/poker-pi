@@ -10,7 +10,17 @@ Authorization: Bearer <token>
 
 An interactive version of this page, where every request can be tried, is the
 [Swagger UI](https://poker.example.com/docs). The machine-readable spec is
-[/openapi.yaml](https://poker.example.com/openapi.yaml).
+[/openapi.yaml](https://poker.example.com/openapi.yaml) (OpenAPI 3.1).
+
+<details>
+<summary>Generating a client from the spec</summary>
+
+The spec can be fed to client generators such as OpenAPI Generator; it has been tested with the
+`dart` and `dart-dio` generators. Every response is a named type, and all fields that can be `null`
+are declared optional. Such fields are nevertheless always present in the JSON (with the value
+`null`), with one exception: events in `action_log` / `events` only contain the fields that belong to
+their `type`.
+</details>
 
 ## Overview
 
@@ -142,13 +152,14 @@ For convenience, the server also accepts:
 Sending **the exact same** request twice (for example a retry after a network error) is safe and
 returns `200` again.
 
-> **Validation errors:** if the body is malformed (not JSON, `turn_id` missing, `amount` not a number),
-> the response is `422` with `detail` as a **list** describing the problem, e.g.
-> `{"detail": [{"type": "missing", "loc": ["body", "turn_id"], "msg": "Field required"}]}`.
+> **Malformed requests** (body not JSON, `turn_id` missing, `amount` not a number, a query parameter
+> out of range) are also answered with `422` and a plain `detail` string, e.g.
+> `{"detail": "Invalid request: body.turn_id: Field required"}`.
 
 ## Events in `action_log`
 
-Every entry has a `type`. Seat-related events also have `seat` and `name`.
+Every entry has a `type`. Seat-related events also have `seat` and `name`. Fields that a type does
+not use are omitted.
 
 | `type` | Fields | Meaning |
 |---|---|---|

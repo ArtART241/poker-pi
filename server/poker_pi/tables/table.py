@@ -17,6 +17,7 @@ from typing import Any, Awaitable, Callable
 from ..config import Settings
 from ..engine.hand import Action, Hand, IllegalAction, SeatSpec, normalize_action
 from ..store.db import Store
+from ..discord_commentator import schedule_tournament_event
 from .bus import EventBus
 from .house import HouseBot
 from .turns import TurnRegistry
@@ -242,12 +243,24 @@ class Table:
     async def _publish_new(self, hand: Hand) -> None:
         new = hand.events[self._published:]
         self._published = len(hand.events)
+
         for ev in new:
             if ev["type"] == "street" or (ev["type"] == "win" and hand.revealed):
                 await self._sleep(self.pacing.street)
+
             if ev["type"] == "deal_hole":
                 continue
+
             self.broadcast(ev)
+
+            # Only tournament tables send Discord commentary.
+            # Practice tables are deliberately ignored.
+            if self.kind == "tournament":
+                schedule_tournament_event(
+                    ev,
+                    table_title=self.title,
+                    big_blind=self.blinds.big if self.blinds else 0,
+                )
 
     async def _sleep(self, seconds: float) -> None:
         await asyncio.sleep(max(0.0, seconds))

@@ -82,6 +82,11 @@ Environment variables (all optional):
 | `POKER_DISCONNECT_AFTER` | `60` | seconds without any request until a bot counts as disconnected |
 | `POKER_RATE_LIMIT` | `60` | unproductive requests (empty polls, errors) per second per bot |
 | `POKER_CARD_DECK` | `drawn` | default card style on the website: `drawn` or `artwork` (viewers can switch in the ⚙ menu) |
+| `DISCORD_TOURNAMENT_WEBHOOK_URL` | unset | Discord webhook for tournament commentary (all-ins, big raises, eliminations, winner); unset = off |
+
+The compose files pass `DISCORD_TOURNAMENT_WEBHOOK_URL` through from the shell or from a `.env` file
+next to the compose file. The URL works as a password for posting to the channel, so it belongs in the
+git-ignored `.env`, never in a committed file.
 
 Per-tournament settings (stack, blind speed, pacing) are options of `create-tournament`.
 
@@ -112,13 +117,18 @@ forwarding, and the home IP stays hidden.
    ```bash
    echo "POKER_DATA_DIR=/srv/poker-pi" >> .env && mkdir -p /srv/poker-pi
    ```
-5. **Start**:
+5. **Discord commentary** (optional): in Discord, Channel settings → Integrations → Webhooks →
+   *New Webhook*, copy the URL:
+   ```bash
+   echo "DISCORD_TOURNAMENT_WEBHOOK_URL=<webhook url>" >> .env
+   ```
+6. **Start**:
    ```bash
    docker compose -f docker-compose.pi.yml up -d --build
    docker compose -f docker-compose.pi.yml logs -f poker-server
    ```
    The first build on the Pi takes a few minutes (npm + pip).
-6. **Create bots** and hand out the tokens:
+7. **Create bots** and hand out the tokens:
    ```bash
    docker compose -f docker-compose.pi.yml exec poker-server python -m poker_pi.admin create-bot "Name" --owner Friend
    ```

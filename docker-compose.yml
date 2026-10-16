@@ -14,6 +14,8 @@ services:
     environment:
       POKER_DB: /data/poker.db
       # POKER_CARD_DECK: artwork      # default card style: drawn | artwork
+      # optional Discord commentary for tournaments; put the URL in .env next to this file
+      DISCORD_TOURNAMENT_WEBHOOK_URL: ${DISCORD_TOURNAMENT_WEBHOOK_URL:-}
     volumes:
       - poker-data:/data
     ports:

@@ -116,6 +116,7 @@ class TournamentManager:
             button_seat=button,
             hand_no=hand_no,
             on_hand_end=self._on_hand_end,
+            on_event=self.hub.commentator.on_event,
         )
         self.hub.tables[table.id] = table
         table.start()

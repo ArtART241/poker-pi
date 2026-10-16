@@ -4,6 +4,7 @@
     python -m poker_pi.admin create-tournament --name "Friday Night" --start "2026-10-16 20:00"
     python -m poker_pi.admin register 1 "Bluff Master" "Other Bot"
     python -m poker_pi.admin start 1
+    python -m poker_pi.admin discord-test
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 from .config import Settings
+from .discord_commentator import post_webhook
 from .store.db import Store, now_iso
 from .tournament.blinds import full_config
 
@@ -89,8 +91,20 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("start")
     p = sub.add_parser("cancel", help="cancel a tournament (also stops a running one)")
     p.add_argument("id", type=int)
+    p = sub.add_parser("discord-test", help="post a message to the Discord webhook to check the setup")
+    p.add_argument("message", nargs="?", default="poker-pi: test message from the admin CLI")
 
     args = ap.parse_args(argv)
+    if args.cmd == "discord-test":
+        url = Settings().discord_webhook_url
+        if not url.startswith("https://"):
+            sys.exit("DISCORD_TOURNAMENT_WEBHOOK_URL is not set (or not an https:// URL)")
+        try:
+            post_webhook(url, args.message)
+        except Exception as e:
+            sys.exit(f"sending failed: {e}")
+        print("Sent.")
+        return
     store = Store(args.db or Settings().db_path)
 
     if args.cmd == "create-bot":

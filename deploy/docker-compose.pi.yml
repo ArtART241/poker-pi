@@ -6,7 +6,8 @@
 #      Public hostname: poker.example.com  ->  http://poker-server:8000
 #   2. echo "TUNNEL_TOKEN=<token>" > .env && chmod 600 .env
 #   3. echo "POKER_DATA_DIR=/srv/poker-pi" >> .env && mkdir -p /srv/poker-pi  (USB disk/SSD, not the SD card)
-#   4. docker compose -f docker-compose.pi.yml up -d --build
+#   4. optional: echo "DISCORD_TOURNAMENT_WEBHOOK_URL=<webhook url>" >> .env  (tournament commentary)
+#   5. docker compose -f docker-compose.pi.yml up -d --build
 services:
   poker-server:
     build: ..
@@ -14,6 +15,7 @@ services:
     restart: unless-stopped
     environment:
       POKER_DB: /data/poker.db
+      DISCORD_TOURNAMENT_WEBHOOK_URL: ${DISCORD_TOURNAMENT_WEBHOOK_URL:-}
     volumes:
       - ${POKER_DATA_DIR:?set POKER_DATA_DIR in .env}:/data
     healthcheck:

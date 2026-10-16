@@ -80,6 +80,7 @@ class SeatState:
 
 
 HandEndHook = Callable[["Table", Hand], Awaitable[None]]
+EventHook = Callable[["Table", dict[str, Any]], None]
 
 
 @dataclass
@@ -97,6 +98,7 @@ class Table:
     button_seat: int | None = None
     hand_no: int = 0
     on_hand_end: HandEndHook | None = None
+    on_event: EventHook | None = None  # sees every public event (tournaments: Discord commentary)
     max_hands: int | None = None
     owner_bot_id: str | None = None  # practice tables: the bot that started it
 
@@ -159,6 +161,8 @@ class Table:
 
     def broadcast(self, event: dict[str, Any]) -> None:
         self.bus.publish(event)
+        if self.on_event:
+            self.on_event(self, event)
 
     # ------------------------------------------------------------------ lifecycle
 

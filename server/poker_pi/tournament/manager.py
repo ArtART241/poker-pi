@@ -14,7 +14,6 @@ from ..engine.hand import Hand
 from ..store.db import now_iso
 from ..tables.house import HOUSE_KINDS, HouseBot
 from ..tables.table import MAX_SEATS, Pacing, SeatState, Table
-from ..discord_commentator import schedule_tournament_event
 from .blinds import blinds_for, full_config
 
 if TYPE_CHECKING:
@@ -117,6 +116,7 @@ class TournamentManager:
             button_seat=button,
             hand_no=hand_no,
             on_hand_end=self._on_hand_end,
+            on_event=self.hub.commentator.on_event,
         )
         self.hub.tables[table.id] = table
         table.start()
@@ -145,24 +145,10 @@ class TournamentManager:
             busted.sort(key=lambda s: (-start_stack.get(s.seat, 0), s.seat))
             first_place = len(table.seats) - len(busted) + 1
             for k, s in enumerate(busted):
-                place = first_place + k
-                places[s.player_id] = place
+                places[s.player_id] = first_place + k
                 del table.seats[s.seat]
-
-                event = {
-                    "type": "eliminated",
-                    "seat": s.seat,
-                    "name": s.name,
-                    "place": place,
-                }
-
-                table.broadcast(event)
-
-                schedule_tournament_event(
-                    event,
-                    table_title=table.title,
-                    big_blind=table.blinds.big if table.blinds else 0,
-                )
+                table.broadcast({"type": "eliminated", "seat": s.seat, "name": s.name,
+                                 "place": first_place + k})
 
         alive = table.alive_seats()
         store = self.hub.store
@@ -174,19 +160,8 @@ class TournamentManager:
                                     state=self._state(table.seats, table.button_seat, table.hand_no, places))
             winner = alive[0].name if alive else None
             table.finish_reason = f"{winner} wins the tournament" if winner else "finished"
-            
-            event = {
-                "type": "tournament_end",
-                "winner": winner,
-                "results": store.results(tid),
-            }
-            table.broadcast(event)
-
-            schedule_tournament_event(
-                event,
-                table_title=table.title,
-                big_blind=table.blinds.big if table.blinds else 0,
-            )
+            table.broadcast({"type": "tournament_end", "winner": winner,
+                             "results": store.results(tid)})
             table._stop = True
             log.info("tournament %s finished, winner %s", tid, winner)
         else:

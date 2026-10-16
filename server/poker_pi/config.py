@@ -33,3 +33,6 @@ class Settings:
     scheduler_interval: float = 1.0
     # requests per second a single bot may send (long-polls included)
     rate_limit: int = field(default_factory=lambda: int(os.environ.get("POKER_RATE_LIMIT", 60)))
+    # Discord webhook for live tournament commentary (empty = off)
+    discord_webhook_url: str = field(default_factory=lambda: os.environ.get(
+        "DISCORD_TOURNAMENT_WEBHOOK_URL", "").strip())

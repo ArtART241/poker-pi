@@ -1,20 +1,48 @@
+"""Live commentary for tournaments in a Discord channel, sent through a webhook.
 
-"""Discord live commentator for tournament poker events."""
+Set DISCORD_TOURNAMENT_WEBHOOK_URL to turn it on. Messages (in German, for the players' server)
+go out one after the other from a single background task, so they arrive in the order the events
+happened and a slow or unreachable Discord never holds up a table.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-import os
 import random
-from urllib.error import HTTPError, URLError
+import re
+from typing import TYPE_CHECKING, Any, Callable
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
-from typing import Any
+
+if TYPE_CHECKING:
+    from .tables.table import Table
 
 log = logging.getLogger(__name__)
 
 BIG_RAISE_MULTIPLE = 10
+MAX_MESSAGE = 2000  # Discord's limit for the content of one message
+QUEUE_SIZE = 200  # messages waiting while Discord is slow; newer ones are dropped beyond that
+POST_TIMEOUT = 5.0
+
+_MARKDOWN = re.compile(r"([\\*_~`|>#\[\]()-])")
+
+
+def _md(text: Any) -> str:
+    """Escape Discord markdown, so a bot called "**x**" shows up as written."""
+    return _MARKDOWN.sub(r"\\\1", str(text))
+
+
+def _chips(n: Any) -> str:
+    """1500 -> "1.500" (German thousands separator)."""
+    return f"{n:,}".replace(",", ".") if isinstance(n, int) else str(n)
+
+
+def _decimal(x: float) -> str:
+    """37.5 -> "37,5", 10.0 -> "10"."""
+    return f"{x:.1f}".removesuffix(".0").replace(".", ",")
+
 
 def _format_event(
     event: dict[str, Any],
@@ -22,18 +50,18 @@ def _format_event(
     table_title: str,
     big_blind: int,
 ) -> str | None:
-    """Turnier-Events in abwechslungsreichen deutschen Discord-Livekommentar umwandeln."""
+    """Turn a tournament event into a German live-commentary line, or None if it is not worth one."""
 
     event_type = event.get("type")
-    table = table_title or "Turniertisch"
+    table = _md(table_title or "Turniertisch")
 
     if event_type == "action":
-        name = event.get("name", "Ein Spieler")
+        name = _md(event.get("name") or "Ein Spieler")
 
-        # All-in: Raise oder Call
+        # all-in, whether by raise or by call
         if event.get("all_in"):
-            bet = f"{event.get('bet', 0):,}".replace(",", ".")
-            pot = f"{event.get('pot', 0):,}".replace(",", ".")
+            bet = _chips(event.get("bet", 0))
+            pot = _chips(event.get("pot", 0))
 
             messages = [
                 f"🔥 **ALL-IN!**\n"
@@ -59,7 +87,7 @@ def _format_event(
 
             return random.choice(messages)
 
-        # Großes Raise ab 10x Big Blind
+        # big raise: to at least BIG_RAISE_MULTIPLE big blinds
         amount = event.get("amount")
 
         if (
@@ -69,42 +97,41 @@ def _format_event(
             and big_blind > 0
             and amount >= BIG_RAISE_MULTIPLE * big_blind
         ):
-            formatted_amount = f"{amount:,}".replace(",", ".")
-            multiplier = amount / big_blind
+            formatted_amount = _chips(amount)
+            multiplier = _decimal(amount / big_blind)
 
             messages = [
                 f"🚨 **DICKER RAISE!**\n"
                 f"**{name}** erhöht auf **{formatted_amount} Chips** "
-                f"({multiplier:.1f}x Big Blind). Da wird ordentlich Druck gemacht! 💥",
+                f"({multiplier}x Big Blind). Da wird ordentlich Druck gemacht! 💥",
 
                 f"💥 **WAS FÜR EIN RAISE!**\n"
                 f"**{name}** legt nach und erhöht auf **{formatted_amount} Chips** "
-                f"({multiplier:.1f}x BB). Das ist mal eine Ansage!",
+                f"({multiplier}x BB). Das ist mal eine Ansage!",
 
                 f"🔥 **ORDENTLICH DRUCK AM TISCH!**\n"
                 f"**{name}** macht ein Raise auf **{formatted_amount} Chips** "
-                f"({multiplier:.1f}x Big Blind). Da müssen die Gegner erst mal mithalten!",
+                f"({multiplier}x Big Blind). Da müssen die Gegner erst mal mithalten!",
 
                 f"🚀 **RAISE MIT WUMMS!**\n"
                 f"**{name}** schraubt den Einsatz auf **{formatted_amount} Chips** "
-                f"({multiplier:.1f}x BB) hoch. Hier wird nicht gekleckert!",
+                f"({multiplier}x BB) hoch. Hier wird nicht gekleckert!",
 
                 f"😈 **EINE KLARE ANSAGE!**\n"
                 f"**{name}** erhöht auf satte **{formatted_amount} Chips** "
-                f"({multiplier:.1f}x Big Blind). Die Konkurrenz steht unter Druck!",
+                f"({multiplier}x Big Blind). Die Konkurrenz steht unter Druck!",
 
                 f"⚡ **GROSSER MOVE!**\n"
                 f"**{name}** feuert ein Raise über **{formatted_amount} Chips** "
-                f"({multiplier:.1f}x BB) ab. Da zeigt jemand Präsenz!"
+                f"({multiplier}x BB) ab. Da zeigt jemand Präsenz!"
             ]
 
             return random.choice(messages)
 
     elif event_type == "tournament_end":
-        winner = event.get("winner")
-
-        if not winner:
+        if not event.get("winner"):
             return None
+        winner = _md(event["winner"])
 
         messages = [
             f"🏆 **TURNIERSIEG!** 🏆\n"
@@ -135,10 +162,10 @@ def _format_event(
         return random.choice(messages)
 
     elif event_type == "eliminated":
-        name = event.get("name", "Ein Spieler")
+        name = _md(event.get("name") or "Ein Spieler")
         place = event.get("place")
 
-        # Zweiter Platz
+        # runner-up
         if place == 2:
             messages = [
                 f"💥 **TURNIER AUS!**\n"
@@ -168,7 +195,7 @@ def _format_event(
 
             return random.choice(messages)
 
-        # Alle anderen bekannten Platzierungen ab Platz 3
+        # every other known place, from 3rd down
         if isinstance(place, int) and not isinstance(place, bool) and place > 2:
             messages = [
                 f"💥 **PLAYER OUT!**\n"
@@ -202,7 +229,7 @@ def _format_event(
 
             return random.choice(messages)
 
-        # Ausscheiden ohne bekannte Platzierung
+        # out without a known place
         messages = [
             f"💥 **PLAYER OUT!**\n"
             f"**{name}** scheidet aus dem Turnier aus!",
@@ -227,48 +254,92 @@ def _format_event(
 
     return None
 
-def _post_webhook(url: str, message: str) -> None:
-    """Send a Discord webhook message. Runs in a worker thread."""
-    payload = {
-        "content": message,
-        "allowed_mentions": {"parse": []},
-    }
+
+def post_webhook(url: str, message: str) -> None:
+    """Send one message to a Discord webhook (blocking; runs in a worker thread)."""
+    payload = {"content": message, "allowed_mentions": {"parse": []}}
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        # Discord rejects urllib's default user agent with 403 (Cloudflare error 1010)
+        headers={"Content-Type": "application/json", "User-Agent": "poker-pi (discord commentator)"},
         method="POST",
     )
-    with urlopen(request, timeout=5) as response:
-        if not 200 <= response.status < 300:
-            raise RuntimeError(f"Discord returned HTTP {response.status}")
-
-async def _send(message: str) -> None:
-    url = os.environ.get("DISCORD_TOURNAMENT_WEBHOOK_URL", "").strip()
-    if not url:
-        return
-
     try:
-        await asyncio.to_thread(_post_webhook, url, message)
-    except (HTTPError, URLError, TimeoutError, OSError, RuntimeError):
-        log.exception("Could not send tournament event to Discord")
+        with urlopen(request, timeout=POST_TIMEOUT):
+            pass
+    except HTTPError as e:
+        detail = e.read(300).decode("utf-8", "replace").strip()
+        raise RuntimeError(f"Discord answered HTTP {e.code}: {detail}") from None
 
-def schedule_tournament_event(
-    event: dict[str, Any],
-    *,
-    table_title: str,
-    big_blind: int,
-) -> None:
-    """Schedule a notification without blocking the poker event loop."""
-    message = _format_event(
-        event,
-        table_title=table_title,
-        big_blind=big_blind,
-    )
-    if message is None:
-        return
 
-    try:
-        asyncio.get_running_loop().create_task(_send(message))
-    except RuntimeError:
-        log.warning("No running event loop; Discord notification skipped")
+Poster = Callable[[str, str], None]
+
+
+class DiscordCommentator:
+    """Formats tournament events and posts them to the webhook, strictly in order."""
+
+    def __init__(self, url: str, post: Poster = post_webhook) -> None:
+        url = url.strip()
+        if url and not url.startswith("https://"):
+            log.warning("DISCORD_TOURNAMENT_WEBHOOK_URL is not an https:// URL; Discord commentary is off")
+            url = ""
+        self.url = url
+        self._post = post
+        self._queue: asyncio.Queue[str] | None = None
+        self._worker: asyncio.Task[None] | None = None
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.url)
+
+    def start(self) -> None:
+        if not self.enabled:
+            return
+        self._queue = asyncio.Queue(QUEUE_SIZE)
+        self._worker = asyncio.create_task(self._run(), name="discord-commentator")
+        log.info("Discord commentary is on")
+
+    async def stop(self, drain: float = 3.0) -> None:
+        """Give queued messages (e.g. the winner) a moment to go out, then stop the worker."""
+        if self._worker is None:
+            return
+        if self._queue is not None:
+            try:
+                await asyncio.wait_for(self._queue.join(), drain)
+            except asyncio.TimeoutError:
+                log.warning("Discord commentary stopped with %d messages unsent", self._queue.qsize())
+        self._worker.cancel()
+        try:
+            await self._worker
+        except asyncio.CancelledError:
+            pass
+        self._worker = None
+
+    def on_event(self, table: "Table", event: dict[str, Any]) -> None:
+        """Table event hook. Never raises: commentary must not break a tournament."""
+        if self._queue is None:
+            return
+        try:
+            message = _format_event(event, table_title=table.title,
+                                    big_blind=table.blinds.big if table.blinds else 0)
+        except Exception:
+            log.exception("Could not format %s event for Discord", event.get("type"))
+            return
+        if message is None:
+            return
+        try:
+            self._queue.put_nowait(message[:MAX_MESSAGE])
+        except asyncio.QueueFull:
+            log.warning("Discord queue is full, dropping a %s message", event.get("type"))
+
+    async def _run(self) -> None:
+        assert self._queue is not None
+        while True:
+            message = await self._queue.get()
+            try:
+                await asyncio.to_thread(self._post, self.url, message)
+            except Exception as e:  # network trouble, HTTP errors: log and carry on
+                log.warning("Could not send a message to Discord: %s", e)
+            finally:
+                self._queue.task_done()

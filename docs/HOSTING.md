@@ -63,6 +63,7 @@ python -m poker_pi.admin register 1 "Bluff Master" "Other Bot"      # bots can a
 python -m poker_pi.admin start 1                                    # start now instead of at start time
 python -m poker_pi.admin reschedule 1 "+1h"
 python -m poker_pi.admin cancel 1                                   # also stops a running tournament
+python -m poker_pi.admin discord-test                               # post a test message to the Discord webhook
 ```
 
 A tournament with fewer than 2 registered bots at its start time is cancelled automatically.
@@ -86,7 +87,10 @@ Environment variables (all optional):
 
 The compose files pass `DISCORD_TOURNAMENT_WEBHOOK_URL` through from the shell or from a `.env` file
 next to the compose file. The URL works as a password for posting to the channel, so it belongs in the
-git-ignored `.env`, never in a committed file.
+git-ignored `.env`, never in a committed file. Once it is set, the server logs
+"Discord commentary is on" at startup, and `python -m poker_pi.admin discord-test` posts a test message.
+Commentary covers tournament tables only (not practice tables) and is written in German; messages are
+sent one at a time in event order, and a failed send is logged and skipped.
 
 Per-tournament settings (stack, blind speed, pacing) are options of `create-tournament`.
 
